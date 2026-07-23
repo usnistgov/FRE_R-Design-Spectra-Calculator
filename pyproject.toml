@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frer-calculator"
+version = "1.0.0"
+description = "Risk-targeted Functional Recovery Earthquake (FREr) design value calculator using USGS hazard and design-map web services"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Dustin Cook" }]
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "codespell",
+]
+
+[project.scripts]
+frer = "frer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+# pycodestyle (E/W), Pyflakes (F), isort (I), pyupgrade (UP), bugbear (B),
+# comprehensions (C4), naming (N)
+select = ["E", "W", "F", "I", "UP", "B", "C4", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+# Assert-heavy tests and re-exported test helpers
+"tests/*" = ["B011"]
+
+[tool.codespell]
+# Skip binary/data artifacts, build output, and the cache; check source + docs.
+skip = "*.csv,*.json,*.png,*.xlsx,*.mat,./.git,./.venv,./results,./tests/usgs_cache,*.egg-info"
+# Domain terms and false positives (comma-separated). afe = annual frequency of
+# exceedance; nshm = National Seismic Hazard Model.
+ignore-words-list = "afe,nshm,ba,fpr,mors"

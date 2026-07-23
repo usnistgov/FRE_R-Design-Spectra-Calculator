@@ -1,0 +1,170 @@
+id,name,lat,lon,region,log,sdc,site_class,vs30,usgs_160_id,nehrp_34_id,frtc_testbed_id
+1,Atmore AL,31,-87.5,CEUS,1,,,NaN,1,NaN,NaN
+2,Birmingham AL,33.5,-86.8,CEUS,1,,,NaN,2,NaN,NaN
+3,El Dorado AR,33.2,-92.7,CEUS,1,,,NaN,3,NaN,NaN
+4,Greenbrier AR,35.2,-92.4,CEUS,1,,,NaN,4,NaN,NaN
+5,Little Rock AR,34.75,-92.3,CEUS,1,,,NaN,5,NaN,NaN
+6,Grand Canyon Village AZ,36.05,-112.15,WUS,1,,,NaN,6,NaN,NaN
+7,Palo Verde AZ,33.4,-112.85,WUS,1,,,NaN,7,NaN,NaN
+8,Phoenix AZ,33.45,-112.1,WUS,1,,,NaN,8,NaN,NaN
+9,Tucson AZ,32.2,-110.95,WUS,1,,,NaN,9,NaN,NaN
+10,Bakersfield CA,35.35,-119.35,SoCal,1,,,NaN,10,NaN,NaN
+11,Big Sur CA,36.25,-121.75,SoCal,1,,,NaN,11,NaN,NaN
+12,Brawley CA,33,-115.55,SoCal,1,,,NaN,12,NaN,NaN
+13,Century City CA,34.05,-118.4,SoCal,1,,,NaN,13,2,NaN
+14,Coalinga CA,36.15,-120.4,SoCal,1,,,NaN,14,NaN,NaN
+15,Concord CA,37.95,-122,NorCal,1,,,NaN,15,13,NaN
+16,Cucamonga CA,34.2,-117.55,SoCal,1,,,NaN,16,NaN,NaN
+17,Death Valley CA,36.35,-116.85,SoCal,1,,,NaN,17,NaN,NaN
+18,Diablo Canyon CA,35.2,-120.85,SoCal,1,,,NaN,18,NaN,NaN
+19,Eureka CA,40.8,-124.2,NorCal,1,,,NaN,19,NaN,NaN
+20,Fresno CA,36.75,-119.75,NorCal,1,,,NaN,20,NaN,NaN
+21,Irvine CA,33.65,-117.8,SoCal,1,,,NaN,21,5,NaN
+22,Long Beach CA,33.8,-118.2,SoCal,1,,,NaN,22,4,NaN
+23,Los Angeles CA,34.05,-118.25,SoCal,1,,,NaN,23,1,NaN
+24,Malibu West CA,34.05,-118.95,SoCal,1,,,NaN,24,NaN,NaN
+25,Mammoth Lakes CA,37.65,-119,NorCal,1,,,NaN,25,NaN,NaN
+26,Monterey CA,36.6,-121.9,NorCal,1,,,NaN,26,14,NaN
+27,Morgan Hill CA,37.15,-121.65,NorCal,1,,,NaN,27,NaN,NaN
+28,Northridge CA,34.2,-118.55,SoCal,1,,,NaN,28,3,NaN
+29,Oakland CA,37.8,-122.25,NorCal,1,,,NaN,29,12,NaN
+30,Palmdale CA,34.5,-118,SoCal,1,,,NaN,30,NaN,NaN
+31,Palm Springs CA,33.85,-116.55,SoCal,1,,,NaN,31,NaN,NaN
+32,Pasadena CA,34.15,-118.15,SoCal,1,,,NaN,32,NaN,NaN
+33,Redding CA,40.6,-122.4,NorCal,1,,,NaN,33,NaN,NaN
+34,Riverside CA,33.95,-117.4,SoCal,1,,,NaN,34,6,NaN
+35,Sacramento CA,38.6,-121.5,NorCal,1,,,NaN,35,15,NaN
+36,Santa Barbara CA,34.45,-119.7,SoCal,1,,,NaN,36,10,NaN
+37,Santa Cruz CA,36.95,-122.05,NorCal,1,,,NaN,37,19,NaN
+38,Santa Rosa CA,38.45,-122.7,NorCal,1,,,NaN,38,21,NaN
+39,San Bernardino CA,34.1,-117.3,SoCal,1,,,NaN,39,7,NaN
+40,San Diego CA,32.7,-117.15,SoCal,1,,,NaN,40,9,NaN
+41,San Francisco CA,37.75,-122.4,NorCal,1,,,NaN,41,16,NaN
+42,San Jose CA,37.35,-121.9,NorCal,1,,,NaN,42,18,NaN
+43,San Luis Obispo CA,35.3,-120.65,SoCal,1,,,NaN,43,8,NaN
+44,San Mateo CA,37.55,-122.3,NorCal,1,,,NaN,44,17,NaN
+45,San Onofre CA,33.4,-117.55,SoCal,1,,,NaN,45,NaN,NaN
+46,Vallejo CA,38.1,-122.25,NorCal,1,,,NaN,46,20,NaN
+47,Ventura CA,34.3,-119.3,SoCal,1,,,NaN,47,11,NaN
+48,Denver CO,39.75,-105,WUS,1,,,NaN,48,NaN,NaN
+49,La Junta CO,38,-103.55,WUS,1,,,NaN,49,NaN,NaN
+50,Paradox CO,38.4,-108.95,WUS,1,,,NaN,50,NaN,NaN
+51,Rangely CO,40.1,-108.8,WUS,1,,,NaN,51,NaN,NaN
+52,Trinidad CO,37.2,-104.5,WUS,1,,,NaN,52,NaN,NaN
+53,Hartford CT,41.75,-72.7,CEUS,1,,,NaN,53,NaN,NaN
+54,Washington DC,38.9,-77.05,CEUS,1,,,NaN,54,NaN,NaN
+55,Wilmington DE,39.75,-75.55,CEUS,1,,,NaN,55,NaN,NaN
+56,Jacksonville FL,30.35,-81.65,CEUS,1,,,NaN,56,NaN,NaN
+57,Miami FL,25.75,-80.2,CEUS,1,,,NaN,57,NaN,NaN
+58,Atlanta GA,33.75,-84.4,CEUS,1,,,NaN,58,NaN,NaN
+59,Lincolnton GA,33.8,-82.5,CEUS,1,,,NaN,59,NaN,NaN
+60,Savannah GA,32.1,-81.1,CEUS,1,,,NaN,60,NaN,NaN
+61,Des Moines IA,41.6,-93.6,CEUS,1,,,NaN,61,NaN,NaN
+62,Boise ID,43.6,-116.2,WUS,1,,,NaN,62,27,NaN
+63,Idaho National Lab ID,43.6,-112.85,WUS,1,,,NaN,63,NaN,NaN
+64,Central IL,40,-90,CEUS,1,,,NaN,64,NaN,NaN
+65,Chicago IL,41.85,-87.65,CEUS,1,,,NaN,65,33,NaN
+66,Evansville IN,38,-87.6,CEUS,1,,,NaN,66,NaN,NaN
+67,Indianapolis IN,39.8,-86.15,CEUS,1,,,NaN,67,NaN,NaN
+68,Topeka KS,39.05,-95.7,CEUS,1,,,NaN,68,NaN,NaN
+69,Wichita KS,37.7,-97.35,CEUS,1,,,NaN,69,NaN,NaN
+70,Louisville KY,38.25,-85.75,CEUS,1,,,NaN,70,NaN,NaN
+71,New Orleans LA,29.95,-90.05,CEUS,1,,,NaN,71,NaN,NaN
+72,Boston MA,42.35,-71.05,CEUS,1,,,NaN,72,NaN,NaN
+73,Baltimore MD,39.3,-76.6,CEUS,1,,,NaN,73,NaN,NaN
+74,Augusta ME,44.3,-69.8,CEUS,1,,,NaN,74,NaN,NaN
+75,Bangor ME,44.8,-68.8,CEUS,1,,,NaN,75,NaN,NaN
+76,Portland ME,43.65,-70.25,CEUS,1,,,NaN,76,NaN,NaN
+77,Detroit MI,42.35,-83.05,CEUS,1,,,NaN,77,NaN,NaN
+78,Minneapolis MN,45,-93.3,CEUS,1,,,NaN,78,NaN,NaN
+79,Cape Girardeau MO,37.3,-89.5,CEUS,1,,,NaN,79,NaN,NaN
+80,New Madrid MO,36.6,-89.55,CEUS,1,,,NaN,80,NaN,NaN
+81,St Louis MO,38.6,-90.2,CEUS,1,,,NaN,81,30,NaN
+82,Jackson MS,32.3,-90.2,CEUS,1,,,NaN,82,NaN,NaN
+83,Billings MT,45.8,-108.5,WUS,1,,,NaN,83,NaN,NaN
+84,Bozeman MT,45.7,-111.05,WUS,1,,,NaN,84,NaN,NaN
+85,Lima MT,44.65,-112.6,WUS,1,,,NaN,85,NaN,NaN
+86,Missoula MT,46.9,-114,WUS,1,,,NaN,86,NaN,NaN
+87,Charlotte NC,35.25,-80.85,CEUS,1,,,NaN,87,NaN,NaN
+88,Fargo ND,46.9,-96.8,CEUS,1,,,NaN,88,NaN,NaN
+89,Omaha NE,41.25,-96,CEUS,1,,,NaN,89,NaN,NaN
+90,Manchester NH,43,-71.45,CEUS,1,,,NaN,90,NaN,NaN
+91,Trenton NJ,40.2,-74.75,CEUS,1,,,NaN,91,NaN,NaN
+92,Albuquerque NM,35.1,-106.6,WUS,1,,,NaN,92,NaN,NaN
+93,Artesia NM,32.85,-104.4,WUS,1,,,NaN,93,NaN,NaN
+94,Las Cruces NM,32.3,-106.75,WUS,1,,,NaN,94,NaN,NaN
+95,Los Alamos National Lab NM,35.85,-106.3,WUS,1,,,NaN,95,NaN,NaN
+96,Carson City NV,39.15,-119.75,WUS,1,,,NaN,96,NaN,NaN
+97,Elko NV,40.85,-115.75,WUS,1,,,NaN,97,NaN,NaN
+98,Las Vegas NV,36.2,-115.15,WUS,1,,,NaN,98,29,NaN
+99,Reno NV,39.55,-119.8,WUS,1,,,NaN,99,28,NaN
+100,Batavia NY,43,-78.2,CEUS,1,,,NaN,100,NaN,NaN
+101,Malone NY,44.85,-74.3,CEUS,1,,,NaN,101,NaN,NaN
+102,New York NY,40.75,-74,CEUS,1,,,NaN,102,34,NaN
+103,Columbus OH,39.95,-83,CEUS,1,,,NaN,103,NaN,NaN
+104,Sidney OH,40.3,-84.15,CEUS,1,,,NaN,104,NaN,NaN
+105,Youngstown OH,41.1,-80.65,CEUS,1,,,NaN,105,NaN,NaN
+106,Elgin OK,34.8,-98.3,CEUS,1,,,NaN,106,NaN,NaN
+107,Oklahoma City OK,35.5,-97.5,CEUS,1,,,NaN,107,NaN,NaN
+108,Astoria OR,46.2,-123.85,PNW,1,,,NaN,108,NaN,NaN
+109,Bend OR,44.05,-121.3,PNW,1,,,NaN,109,NaN,NaN
+110,Brookings OR,42.05,-124.25,PNW,1,,,NaN,110,NaN,NaN
+111,Coos Bay OR,43.4,-124.2,PNW,1,,,NaN,111,NaN,NaN
+112,Eugene OR,44.05,-123.1,PNW,1,,,NaN,112,NaN,NaN
+113,Hillsboro OR,45.5,-123,PNW,1,,,NaN,113,NaN,NaN
+114,Klamath Falls OR,42.2,-121.8,PNW,1,,,NaN,114,NaN,NaN
+115,Medford OR,42.35,-122.9,PNW,1,,,NaN,115,NaN,NaN
+116,Newport OR,44.65,-124.05,PNW,1,,,NaN,116,NaN,NaN
+117,Pendleton OR,45.7,-118.8,PNW,1,,,NaN,117,NaN,NaN
+118,Portland OR,45.5,-122.65,PNW,1,,,NaN,118,25,NaN
+119,Salem OR,44.95,-123.05,PNW,1,,,NaN,119,NaN,NaN
+120,Philadelphia PA,39.95,-75.15,CEUS,1,,,NaN,120,NaN,NaN
+121,Pittsburg PA,40.45,-80,CEUS,1,,,NaN,121,NaN,NaN
+122,Providence RI,41.8,-71.4,CEUS,1,,,NaN,122,NaN,NaN
+123,Charleston SC,32.8,-79.95,CEUS,1,,,NaN,123,32,NaN
+124,Edgemont SD,43.3,-103.85,CEUS,1,,,NaN,124,NaN,NaN
+125,Platte SD,43.4,-98.85,CEUS,1,,,NaN,125,NaN,NaN
+126,Sioux Falls SD,43.55,-96.75,CEUS,1,,,NaN,126,NaN,NaN
+127,Chattanooga TN,35.05,-85.25,CEUS,1,,,NaN,127,NaN,NaN
+128,Knoxville TN,35.95,-83.9,CEUS,1,,,NaN,128,NaN,NaN
+129,Maryville TN,35.75,-84,CEUS,1,,,NaN,129,NaN,NaN
+130,Memphis TN,35.15,-90.05,CEUS,1,,,NaN,130,31,NaN
+131,Amarillo TX,35.2,-101.85,CEUS,1,,,NaN,131,NaN,NaN
+132,Dallas TX,32.8,-96.8,CEUS,1,,,NaN,132,NaN,NaN
+133,Houston TX,29.75,-95.35,CEUS,1,,,NaN,133,NaN,NaN
+134,Kermit TX,31.85,-103.1,CEUS,1,,,NaN,134,NaN,NaN
+135,San Antonio TX,29.4,-98.5,CEUS,1,,,NaN,135,NaN,NaN
+136,Snyder TX,32.7,-100.9,CEUS,1,,,NaN,136,NaN,NaN
+137,Brigham City UT,41.5,-112,WUS,1,,,NaN,137,NaN,NaN
+138,Cedar City UT,37.7,-113.05,WUS,1,,,NaN,138,NaN,NaN
+139,Green River UT,39,-110.15,WUS,1,,,NaN,139,NaN,NaN
+140,Provo UT,40.25,-111.65,WUS,1,,,NaN,140,NaN,NaN
+141,Salt Lake City UT,40.75,-111.9,WUS,1,,,NaN,141,26,NaN
+142,Blacksburg VA,37.25,-80.4,CEUS,1,,,NaN,142,NaN,NaN
+143,Richmond VA,37.55,-77.45,CEUS,1,,,NaN,143,NaN,NaN
+144,Burlington VT,44.5,-73.2,CEUS,1,,,NaN,144,NaN,NaN
+145,Aberdeen WA,47,-123.8,PNW,1,,,NaN,145,NaN,NaN
+146,Bellingham WA,48.75,-122.5,PNW,1,,,NaN,146,NaN,NaN
+147,Ellensburg WA,47,-120.55,PNW,1,,,NaN,147,NaN,NaN
+148,Everett WA,48,-122.2,PNW,1,,,NaN,148,24,NaN
+149,Hanford Site WA,46.55,-119.6,PNW,1,,,NaN,149,NaN,NaN
+150,Olympia WA,47.05,-122.9,PNW,1,,,NaN,150,NaN,NaN
+151,Seattle WA,47.6,-122.3,PNW,1,,,NaN,151,22,NaN
+152,Spokane WA,47.65,-117.4,PNW,1,,,NaN,152,NaN,NaN
+153,Tacoma WA,47.25,-122.45,PNW,1,,,NaN,153,23,NaN
+154,Yakima WA,46.6,-120.5,PNW,1,,,NaN,154,NaN,NaN
+155,Milwaukee WI,43.05,-87.9,CEUS,1,,,NaN,155,NaN,NaN
+156,Charleston WV,38.35,-81.65,CEUS,1,,,NaN,156,NaN,NaN
+157,Casper WY,42.85,-106.3,WUS,1,,,NaN,157,NaN,NaN
+158,Cheyenne WY,41.15,-104.8,WUS,1,,,NaN,158,NaN,NaN
+159,Jackson WY,43.5,-110.75,WUS,1,,,NaN,159,NaN,NaN
+160,Yellowstone WY,44.4,-110.55,WUS,1,,,NaN,160,NaN,NaN
+161,"Pasadena, CA",34.145219,-118.073085,SoCal,1,E,CD,310,NaN,NaN,1
+162,"Seattle, WA",47.622,-122.336,PNW,1,D,D,265,NaN,NaN,2
+163,"Daly City, CA",37.7068,-122.4127,NorCal,1,E,D,265,NaN,NaN,3
+164,"Torrance, CA",33.83,-118,SoCal,1,F,D,350,NaN,NaN,4
+165,"Torrance, CA",33.83,-118,SoCal,1,F,CD,350,NaN,NaN,5
+166,"San Francisco, CA",37.79,-122,NorCal,1,D,D,280,NaN,NaN,6
+167,"Elk Grove, CA",38.4213934,-121.4033657,NorCal,1,,D,280,NaN,NaN,7
+168,Irvine CA - CFS UCSD,33.69,-117.83,SoCal,1,D,C,530,NaN,NaN,8
+169,Los Angeles CA,34.058,-118.20882,SoCal,0,,CD,350,NaN,NaN,9

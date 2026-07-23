@@ -1,0 +1,641 @@
+id,name,lat,lon,region,site_class
+1,Atmore AL,31,-87.5,CEUS,BC
+1,Atmore AL,31,-87.5,CEUS,C
+1,Atmore AL,31,-87.5,CEUS,D
+1,Atmore AL,31,-87.5,CEUS,E
+2,Birmingham AL,33.5,-86.8,CEUS,BC
+2,Birmingham AL,33.5,-86.8,CEUS,C
+2,Birmingham AL,33.5,-86.8,CEUS,D
+2,Birmingham AL,33.5,-86.8,CEUS,E
+3,El Dorado AR,33.2,-92.7,CEUS,BC
+3,El Dorado AR,33.2,-92.7,CEUS,C
+3,El Dorado AR,33.2,-92.7,CEUS,D
+3,El Dorado AR,33.2,-92.7,CEUS,E
+4,Greenbrier AR,35.2,-92.4,CEUS,BC
+4,Greenbrier AR,35.2,-92.4,CEUS,C
+4,Greenbrier AR,35.2,-92.4,CEUS,D
+4,Greenbrier AR,35.2,-92.4,CEUS,E
+5,Little Rock AR,34.75,-92.3,CEUS,BC
+5,Little Rock AR,34.75,-92.3,CEUS,C
+5,Little Rock AR,34.75,-92.3,CEUS,D
+5,Little Rock AR,34.75,-92.3,CEUS,E
+6,Grand Canyon Village AZ,36.05,-112.15,WUS,BC
+6,Grand Canyon Village AZ,36.05,-112.15,WUS,C
+6,Grand Canyon Village AZ,36.05,-112.15,WUS,D
+6,Grand Canyon Village AZ,36.05,-112.15,WUS,E
+7,Palo Verde AZ,33.4,-112.85,WUS,BC
+7,Palo Verde AZ,33.4,-112.85,WUS,C
+7,Palo Verde AZ,33.4,-112.85,WUS,D
+7,Palo Verde AZ,33.4,-112.85,WUS,E
+8,Phoenix AZ,33.45,-112.1,WUS,BC
+8,Phoenix AZ,33.45,-112.1,WUS,C
+8,Phoenix AZ,33.45,-112.1,WUS,D
+8,Phoenix AZ,33.45,-112.1,WUS,E
+9,Tucson AZ,32.2,-110.95,WUS,BC
+9,Tucson AZ,32.2,-110.95,WUS,C
+9,Tucson AZ,32.2,-110.95,WUS,D
+9,Tucson AZ,32.2,-110.95,WUS,E
+10,Bakersfield CA,35.35,-119.35,SoCal,BC
+10,Bakersfield CA,35.35,-119.35,SoCal,C
+10,Bakersfield CA,35.35,-119.35,SoCal,D
+10,Bakersfield CA,35.35,-119.35,SoCal,E
+11,Big Sur CA,36.25,-121.75,SoCal,BC
+11,Big Sur CA,36.25,-121.75,SoCal,C
+11,Big Sur CA,36.25,-121.75,SoCal,D
+11,Big Sur CA,36.25,-121.75,SoCal,E
+12,Brawley CA,33,-115.55,SoCal,BC
+12,Brawley CA,33,-115.55,SoCal,C
+12,Brawley CA,33,-115.55,SoCal,D
+12,Brawley CA,33,-115.55,SoCal,E
+13,Century City CA,34.05,-118.4,SoCal,BC
+13,Century City CA,34.05,-118.4,SoCal,C
+13,Century City CA,34.05,-118.4,SoCal,D
+13,Century City CA,34.05,-118.4,SoCal,E
+14,Coalinga CA,36.15,-120.4,SoCal,BC
+14,Coalinga CA,36.15,-120.4,SoCal,C
+14,Coalinga CA,36.15,-120.4,SoCal,D
+14,Coalinga CA,36.15,-120.4,SoCal,E
+15,Concord CA,37.95,-122,NorCal,BC
+15,Concord CA,37.95,-122,NorCal,C
+15,Concord CA,37.95,-122,NorCal,D
+15,Concord CA,37.95,-122,NorCal,E
+16,Cucamonga CA,34.2,-117.55,SoCal,BC
+16,Cucamonga CA,34.2,-117.55,SoCal,C
+16,Cucamonga CA,34.2,-117.55,SoCal,D
+16,Cucamonga CA,34.2,-117.55,SoCal,E
+17,Death Valley CA,36.35,-116.85,SoCal,BC
+17,Death Valley CA,36.35,-116.85,SoCal,C
+17,Death Valley CA,36.35,-116.85,SoCal,D
+17,Death Valley CA,36.35,-116.85,SoCal,E
+18,Diablo Canyon CA,35.2,-120.85,SoCal,BC
+18,Diablo Canyon CA,35.2,-120.85,SoCal,C
+18,Diablo Canyon CA,35.2,-120.85,SoCal,D
+18,Diablo Canyon CA,35.2,-120.85,SoCal,E
+19,Eureka CA,40.8,-124.2,NorCal,BC
+19,Eureka CA,40.8,-124.2,NorCal,C
+19,Eureka CA,40.8,-124.2,NorCal,D
+19,Eureka CA,40.8,-124.2,NorCal,E
+20,Fresno CA,36.75,-119.75,NorCal,BC
+20,Fresno CA,36.75,-119.75,NorCal,C
+20,Fresno CA,36.75,-119.75,NorCal,D
+20,Fresno CA,36.75,-119.75,NorCal,E
+21,Irvine CA,33.65,-117.8,SoCal,BC
+21,Irvine CA,33.65,-117.8,SoCal,C
+21,Irvine CA,33.65,-117.8,SoCal,D
+21,Irvine CA,33.65,-117.8,SoCal,E
+22,Long Beach CA,33.8,-118.2,SoCal,BC
+22,Long Beach CA,33.8,-118.2,SoCal,C
+22,Long Beach CA,33.8,-118.2,SoCal,D
+22,Long Beach CA,33.8,-118.2,SoCal,E
+23,Los Angeles CA,34.05,-118.25,SoCal,BC
+23,Los Angeles CA,34.05,-118.25,SoCal,C
+23,Los Angeles CA,34.05,-118.25,SoCal,D
+23,Los Angeles CA,34.05,-118.25,SoCal,E
+24,Malibu West CA,34.05,-118.95,SoCal,BC
+24,Malibu West CA,34.05,-118.95,SoCal,C
+24,Malibu West CA,34.05,-118.95,SoCal,D
+24,Malibu West CA,34.05,-118.95,SoCal,E
+25,Mammoth Lakes CA,37.65,-119,NorCal,BC
+25,Mammoth Lakes CA,37.65,-119,NorCal,C
+25,Mammoth Lakes CA,37.65,-119,NorCal,D
+25,Mammoth Lakes CA,37.65,-119,NorCal,E
+26,Monterey CA,36.6,-121.9,NorCal,BC
+26,Monterey CA,36.6,-121.9,NorCal,C
+26,Monterey CA,36.6,-121.9,NorCal,D
+26,Monterey CA,36.6,-121.9,NorCal,E
+27,Morgan Hill CA,37.15,-121.65,NorCal,BC
+27,Morgan Hill CA,37.15,-121.65,NorCal,C
+27,Morgan Hill CA,37.15,-121.65,NorCal,D
+27,Morgan Hill CA,37.15,-121.65,NorCal,E
+28,Northridge CA,34.2,-118.55,SoCal,BC
+28,Northridge CA,34.2,-118.55,SoCal,C
+28,Northridge CA,34.2,-118.55,SoCal,D
+28,Northridge CA,34.2,-118.55,SoCal,E
+29,Oakland CA,37.8,-122.25,NorCal,BC
+29,Oakland CA,37.8,-122.25,NorCal,C
+29,Oakland CA,37.8,-122.25,NorCal,D
+29,Oakland CA,37.8,-122.25,NorCal,E
+30,Palmdale CA,34.5,-118,SoCal,BC
+30,Palmdale CA,34.5,-118,SoCal,C
+30,Palmdale CA,34.5,-118,SoCal,D
+30,Palmdale CA,34.5,-118,SoCal,E
+31,Palm Springs CA,33.85,-116.55,SoCal,BC
+31,Palm Springs CA,33.85,-116.55,SoCal,C
+31,Palm Springs CA,33.85,-116.55,SoCal,D
+31,Palm Springs CA,33.85,-116.55,SoCal,E
+32,Pasadena CA,34.15,-118.15,SoCal,BC
+32,Pasadena CA,34.15,-118.15,SoCal,C
+32,Pasadena CA,34.15,-118.15,SoCal,D
+32,Pasadena CA,34.15,-118.15,SoCal,E
+33,Redding CA,40.6,-122.4,NorCal,BC
+33,Redding CA,40.6,-122.4,NorCal,C
+33,Redding CA,40.6,-122.4,NorCal,D
+33,Redding CA,40.6,-122.4,NorCal,E
+34,Riverside CA,33.95,-117.4,SoCal,BC
+34,Riverside CA,33.95,-117.4,SoCal,C
+34,Riverside CA,33.95,-117.4,SoCal,D
+34,Riverside CA,33.95,-117.4,SoCal,E
+35,Sacramento CA,38.6,-121.5,NorCal,BC
+35,Sacramento CA,38.6,-121.5,NorCal,C
+35,Sacramento CA,38.6,-121.5,NorCal,D
+35,Sacramento CA,38.6,-121.5,NorCal,E
+36,Santa Barbara CA,34.45,-119.7,SoCal,BC
+36,Santa Barbara CA,34.45,-119.7,SoCal,C
+36,Santa Barbara CA,34.45,-119.7,SoCal,D
+36,Santa Barbara CA,34.45,-119.7,SoCal,E
+37,Santa Cruz CA,36.95,-122.05,NorCal,BC
+37,Santa Cruz CA,36.95,-122.05,NorCal,C
+37,Santa Cruz CA,36.95,-122.05,NorCal,D
+37,Santa Cruz CA,36.95,-122.05,NorCal,E
+38,Santa Rosa CA,38.45,-122.7,NorCal,BC
+38,Santa Rosa CA,38.45,-122.7,NorCal,C
+38,Santa Rosa CA,38.45,-122.7,NorCal,D
+38,Santa Rosa CA,38.45,-122.7,NorCal,E
+39,San Bernardino CA,34.1,-117.3,SoCal,BC
+39,San Bernardino CA,34.1,-117.3,SoCal,C
+39,San Bernardino CA,34.1,-117.3,SoCal,D
+39,San Bernardino CA,34.1,-117.3,SoCal,E
+40,San Diego CA,32.7,-117.15,SoCal,BC
+40,San Diego CA,32.7,-117.15,SoCal,C
+40,San Diego CA,32.7,-117.15,SoCal,D
+40,San Diego CA,32.7,-117.15,SoCal,E
+41,San Francisco CA,37.75,-122.4,NorCal,BC
+41,San Francisco CA,37.75,-122.4,NorCal,C
+41,San Francisco CA,37.75,-122.4,NorCal,D
+41,San Francisco CA,37.75,-122.4,NorCal,E
+42,San Jose CA,37.35,-121.9,NorCal,BC
+42,San Jose CA,37.35,-121.9,NorCal,C
+42,San Jose CA,37.35,-121.9,NorCal,D
+42,San Jose CA,37.35,-121.9,NorCal,E
+43,San Luis Obispo CA,35.3,-120.65,SoCal,BC
+43,San Luis Obispo CA,35.3,-120.65,SoCal,C
+43,San Luis Obispo CA,35.3,-120.65,SoCal,D
+43,San Luis Obispo CA,35.3,-120.65,SoCal,E
+44,San Mateo CA,37.55,-122.3,NorCal,BC
+44,San Mateo CA,37.55,-122.3,NorCal,C
+44,San Mateo CA,37.55,-122.3,NorCal,D
+44,San Mateo CA,37.55,-122.3,NorCal,E
+45,San Onofre CA,33.4,-117.55,SoCal,BC
+45,San Onofre CA,33.4,-117.55,SoCal,C
+45,San Onofre CA,33.4,-117.55,SoCal,D
+45,San Onofre CA,33.4,-117.55,SoCal,E
+46,Vallejo CA,38.1,-122.25,NorCal,BC
+46,Vallejo CA,38.1,-122.25,NorCal,C
+46,Vallejo CA,38.1,-122.25,NorCal,D
+46,Vallejo CA,38.1,-122.25,NorCal,E
+47,Ventura CA,34.3,-119.3,SoCal,BC
+47,Ventura CA,34.3,-119.3,SoCal,C
+47,Ventura CA,34.3,-119.3,SoCal,D
+47,Ventura CA,34.3,-119.3,SoCal,E
+48,Denver CO,39.75,-105,WUS,BC
+48,Denver CO,39.75,-105,WUS,C
+48,Denver CO,39.75,-105,WUS,D
+48,Denver CO,39.75,-105,WUS,E
+49,La Junta CO,38,-103.55,WUS,BC
+49,La Junta CO,38,-103.55,WUS,C
+49,La Junta CO,38,-103.55,WUS,D
+49,La Junta CO,38,-103.55,WUS,E
+50,Paradox CO,38.4,-108.95,WUS,BC
+50,Paradox CO,38.4,-108.95,WUS,C
+50,Paradox CO,38.4,-108.95,WUS,D
+50,Paradox CO,38.4,-108.95,WUS,E
+51,Rangely CO,40.1,-108.8,WUS,BC
+51,Rangely CO,40.1,-108.8,WUS,C
+51,Rangely CO,40.1,-108.8,WUS,D
+51,Rangely CO,40.1,-108.8,WUS,E
+52,Trinidad CO,37.2,-104.5,WUS,BC
+52,Trinidad CO,37.2,-104.5,WUS,C
+52,Trinidad CO,37.2,-104.5,WUS,D
+52,Trinidad CO,37.2,-104.5,WUS,E
+53,Hartford CT,41.75,-72.7,CEUS,BC
+53,Hartford CT,41.75,-72.7,CEUS,C
+53,Hartford CT,41.75,-72.7,CEUS,D
+53,Hartford CT,41.75,-72.7,CEUS,E
+54,Washington DC,38.9,-77.05,CEUS,BC
+54,Washington DC,38.9,-77.05,CEUS,C
+54,Washington DC,38.9,-77.05,CEUS,D
+54,Washington DC,38.9,-77.05,CEUS,E
+55,Wilmington DE,39.75,-75.55,CEUS,BC
+55,Wilmington DE,39.75,-75.55,CEUS,C
+55,Wilmington DE,39.75,-75.55,CEUS,D
+55,Wilmington DE,39.75,-75.55,CEUS,E
+56,Jacksonville FL,30.35,-81.65,CEUS,BC
+56,Jacksonville FL,30.35,-81.65,CEUS,C
+56,Jacksonville FL,30.35,-81.65,CEUS,D
+56,Jacksonville FL,30.35,-81.65,CEUS,E
+57,Miami FL,25.75,-80.2,CEUS,BC
+57,Miami FL,25.75,-80.2,CEUS,C
+57,Miami FL,25.75,-80.2,CEUS,D
+57,Miami FL,25.75,-80.2,CEUS,E
+58,Atlanta GA,33.75,-84.4,CEUS,BC
+58,Atlanta GA,33.75,-84.4,CEUS,C
+58,Atlanta GA,33.75,-84.4,CEUS,D
+58,Atlanta GA,33.75,-84.4,CEUS,E
+59,Lincolnton GA,33.8,-82.5,CEUS,BC
+59,Lincolnton GA,33.8,-82.5,CEUS,C
+59,Lincolnton GA,33.8,-82.5,CEUS,D
+59,Lincolnton GA,33.8,-82.5,CEUS,E
+60,Savannah GA,32.1,-81.1,CEUS,BC
+60,Savannah GA,32.1,-81.1,CEUS,C
+60,Savannah GA,32.1,-81.1,CEUS,D
+60,Savannah GA,32.1,-81.1,CEUS,E
+61,Des Moines IA,41.6,-93.6,CEUS,BC
+61,Des Moines IA,41.6,-93.6,CEUS,C
+61,Des Moines IA,41.6,-93.6,CEUS,D
+61,Des Moines IA,41.6,-93.6,CEUS,E
+62,Boise ID,43.6,-116.2,WUS,BC
+62,Boise ID,43.6,-116.2,WUS,C
+62,Boise ID,43.6,-116.2,WUS,D
+62,Boise ID,43.6,-116.2,WUS,E
+63,Idaho National Lab ID,43.6,-112.85,WUS,BC
+63,Idaho National Lab ID,43.6,-112.85,WUS,C
+63,Idaho National Lab ID,43.6,-112.85,WUS,D
+63,Idaho National Lab ID,43.6,-112.85,WUS,E
+64,Central IL,40,-90,CEUS,BC
+64,Central IL,40,-90,CEUS,C
+64,Central IL,40,-90,CEUS,D
+64,Central IL,40,-90,CEUS,E
+65,Chicago IL,41.85,-87.65,CEUS,BC
+65,Chicago IL,41.85,-87.65,CEUS,C
+65,Chicago IL,41.85,-87.65,CEUS,D
+65,Chicago IL,41.85,-87.65,CEUS,E
+66,Evansville IN,38,-87.6,CEUS,BC
+66,Evansville IN,38,-87.6,CEUS,C
+66,Evansville IN,38,-87.6,CEUS,D
+66,Evansville IN,38,-87.6,CEUS,E
+67,Indianapolis IN,39.8,-86.15,CEUS,BC
+67,Indianapolis IN,39.8,-86.15,CEUS,C
+67,Indianapolis IN,39.8,-86.15,CEUS,D
+67,Indianapolis IN,39.8,-86.15,CEUS,E
+68,Topeka KS,39.05,-95.7,CEUS,BC
+68,Topeka KS,39.05,-95.7,CEUS,C
+68,Topeka KS,39.05,-95.7,CEUS,D
+68,Topeka KS,39.05,-95.7,CEUS,E
+69,Wichita KS,37.7,-97.35,CEUS,BC
+69,Wichita KS,37.7,-97.35,CEUS,C
+69,Wichita KS,37.7,-97.35,CEUS,D
+69,Wichita KS,37.7,-97.35,CEUS,E
+70,Louisville KY,38.25,-85.75,CEUS,BC
+70,Louisville KY,38.25,-85.75,CEUS,C
+70,Louisville KY,38.25,-85.75,CEUS,D
+70,Louisville KY,38.25,-85.75,CEUS,E
+71,New Orleans LA,29.95,-90.05,CEUS,BC
+71,New Orleans LA,29.95,-90.05,CEUS,C
+71,New Orleans LA,29.95,-90.05,CEUS,D
+71,New Orleans LA,29.95,-90.05,CEUS,E
+72,Boston MA,42.35,-71.05,CEUS,BC
+72,Boston MA,42.35,-71.05,CEUS,C
+72,Boston MA,42.35,-71.05,CEUS,D
+72,Boston MA,42.35,-71.05,CEUS,E
+73,Baltimore MD,39.3,-76.6,CEUS,BC
+73,Baltimore MD,39.3,-76.6,CEUS,C
+73,Baltimore MD,39.3,-76.6,CEUS,D
+73,Baltimore MD,39.3,-76.6,CEUS,E
+74,Augusta ME,44.3,-69.8,CEUS,BC
+74,Augusta ME,44.3,-69.8,CEUS,C
+74,Augusta ME,44.3,-69.8,CEUS,D
+74,Augusta ME,44.3,-69.8,CEUS,E
+75,Bangor ME,44.8,-68.8,CEUS,BC
+75,Bangor ME,44.8,-68.8,CEUS,C
+75,Bangor ME,44.8,-68.8,CEUS,D
+75,Bangor ME,44.8,-68.8,CEUS,E
+76,Portland ME,43.65,-70.25,CEUS,BC
+76,Portland ME,43.65,-70.25,CEUS,C
+76,Portland ME,43.65,-70.25,CEUS,D
+76,Portland ME,43.65,-70.25,CEUS,E
+77,Detroit MI,42.35,-83.05,CEUS,BC
+77,Detroit MI,42.35,-83.05,CEUS,C
+77,Detroit MI,42.35,-83.05,CEUS,D
+77,Detroit MI,42.35,-83.05,CEUS,E
+78,Minneapolis MN,45,-93.3,CEUS,BC
+78,Minneapolis MN,45,-93.3,CEUS,C
+78,Minneapolis MN,45,-93.3,CEUS,D
+78,Minneapolis MN,45,-93.3,CEUS,E
+79,Cape Girardeau MO,37.3,-89.5,CEUS,BC
+79,Cape Girardeau MO,37.3,-89.5,CEUS,C
+79,Cape Girardeau MO,37.3,-89.5,CEUS,D
+79,Cape Girardeau MO,37.3,-89.5,CEUS,E
+80,New Madrid MO,36.6,-89.55,CEUS,BC
+80,New Madrid MO,36.6,-89.55,CEUS,C
+80,New Madrid MO,36.6,-89.55,CEUS,D
+80,New Madrid MO,36.6,-89.55,CEUS,E
+81,St Louis MO,38.6,-90.2,CEUS,BC
+81,St Louis MO,38.6,-90.2,CEUS,C
+81,St Louis MO,38.6,-90.2,CEUS,D
+81,St Louis MO,38.6,-90.2,CEUS,E
+82,Jackson MS,32.3,-90.2,CEUS,BC
+82,Jackson MS,32.3,-90.2,CEUS,C
+82,Jackson MS,32.3,-90.2,CEUS,D
+82,Jackson MS,32.3,-90.2,CEUS,E
+83,Billings MT,45.8,-108.5,WUS,BC
+83,Billings MT,45.8,-108.5,WUS,C
+83,Billings MT,45.8,-108.5,WUS,D
+83,Billings MT,45.8,-108.5,WUS,E
+84,Bozeman MT,45.7,-111.05,WUS,BC
+84,Bozeman MT,45.7,-111.05,WUS,C
+84,Bozeman MT,45.7,-111.05,WUS,D
+84,Bozeman MT,45.7,-111.05,WUS,E
+85,Lima MT,44.65,-112.6,WUS,BC
+85,Lima MT,44.65,-112.6,WUS,C
+85,Lima MT,44.65,-112.6,WUS,D
+85,Lima MT,44.65,-112.6,WUS,E
+86,Missoula MT,46.9,-114,WUS,BC
+86,Missoula MT,46.9,-114,WUS,C
+86,Missoula MT,46.9,-114,WUS,D
+86,Missoula MT,46.9,-114,WUS,E
+87,Charlotte NC,35.25,-80.85,CEUS,BC
+87,Charlotte NC,35.25,-80.85,CEUS,C
+87,Charlotte NC,35.25,-80.85,CEUS,D
+87,Charlotte NC,35.25,-80.85,CEUS,E
+88,Fargo ND,46.9,-96.8,CEUS,BC
+88,Fargo ND,46.9,-96.8,CEUS,C
+88,Fargo ND,46.9,-96.8,CEUS,D
+88,Fargo ND,46.9,-96.8,CEUS,E
+89,Omaha NE,41.25,-96,CEUS,BC
+89,Omaha NE,41.25,-96,CEUS,C
+89,Omaha NE,41.25,-96,CEUS,D
+89,Omaha NE,41.25,-96,CEUS,E
+90,Manchester NH,43,-71.45,CEUS,BC
+90,Manchester NH,43,-71.45,CEUS,C
+90,Manchester NH,43,-71.45,CEUS,D
+90,Manchester NH,43,-71.45,CEUS,E
+91,Trenton NJ,40.2,-74.75,CEUS,BC
+91,Trenton NJ,40.2,-74.75,CEUS,C
+91,Trenton NJ,40.2,-74.75,CEUS,D
+91,Trenton NJ,40.2,-74.75,CEUS,E
+92,Albuquerque NM,35.1,-106.6,WUS,BC
+92,Albuquerque NM,35.1,-106.6,WUS,C
+92,Albuquerque NM,35.1,-106.6,WUS,D
+92,Albuquerque NM,35.1,-106.6,WUS,E
+93,Artesia NM,32.85,-104.4,WUS,BC
+93,Artesia NM,32.85,-104.4,WUS,C
+93,Artesia NM,32.85,-104.4,WUS,D
+93,Artesia NM,32.85,-104.4,WUS,E
+94,Las Cruces NM,32.3,-106.75,WUS,BC
+94,Las Cruces NM,32.3,-106.75,WUS,C
+94,Las Cruces NM,32.3,-106.75,WUS,D
+94,Las Cruces NM,32.3,-106.75,WUS,E
+95,Los Alamos National Lab NM,35.85,-106.3,WUS,BC
+95,Los Alamos National Lab NM,35.85,-106.3,WUS,C
+95,Los Alamos National Lab NM,35.85,-106.3,WUS,D
+95,Los Alamos National Lab NM,35.85,-106.3,WUS,E
+96,Carson City NV,39.15,-119.75,WUS,BC
+96,Carson City NV,39.15,-119.75,WUS,C
+96,Carson City NV,39.15,-119.75,WUS,D
+96,Carson City NV,39.15,-119.75,WUS,E
+97,Elko NV,40.85,-115.75,WUS,BC
+97,Elko NV,40.85,-115.75,WUS,C
+97,Elko NV,40.85,-115.75,WUS,D
+97,Elko NV,40.85,-115.75,WUS,E
+98,Las Vegas NV,36.2,-115.15,WUS,BC
+98,Las Vegas NV,36.2,-115.15,WUS,C
+98,Las Vegas NV,36.2,-115.15,WUS,D
+98,Las Vegas NV,36.2,-115.15,WUS,E
+99,Reno NV,39.55,-119.8,WUS,BC
+99,Reno NV,39.55,-119.8,WUS,C
+99,Reno NV,39.55,-119.8,WUS,D
+99,Reno NV,39.55,-119.8,WUS,E
+100,Batavia NY,43,-78.2,CEUS,BC
+100,Batavia NY,43,-78.2,CEUS,C
+100,Batavia NY,43,-78.2,CEUS,D
+100,Batavia NY,43,-78.2,CEUS,E
+101,Malone NY,44.85,-74.3,CEUS,BC
+101,Malone NY,44.85,-74.3,CEUS,C
+101,Malone NY,44.85,-74.3,CEUS,D
+101,Malone NY,44.85,-74.3,CEUS,E
+102,New York NY,40.75,-74,CEUS,BC
+102,New York NY,40.75,-74,CEUS,C
+102,New York NY,40.75,-74,CEUS,D
+102,New York NY,40.75,-74,CEUS,E
+103,Columbus OH,39.95,-83,CEUS,BC
+103,Columbus OH,39.95,-83,CEUS,C
+103,Columbus OH,39.95,-83,CEUS,D
+103,Columbus OH,39.95,-83,CEUS,E
+104,Sidney OH,40.3,-84.15,CEUS,BC
+104,Sidney OH,40.3,-84.15,CEUS,C
+104,Sidney OH,40.3,-84.15,CEUS,D
+104,Sidney OH,40.3,-84.15,CEUS,E
+105,Youngstown OH,41.1,-80.65,CEUS,BC
+105,Youngstown OH,41.1,-80.65,CEUS,C
+105,Youngstown OH,41.1,-80.65,CEUS,D
+105,Youngstown OH,41.1,-80.65,CEUS,E
+106,Elgin OK,34.8,-98.3,CEUS,BC
+106,Elgin OK,34.8,-98.3,CEUS,C
+106,Elgin OK,34.8,-98.3,CEUS,D
+106,Elgin OK,34.8,-98.3,CEUS,E
+107,Oklahoma City OK,35.5,-97.5,CEUS,BC
+107,Oklahoma City OK,35.5,-97.5,CEUS,C
+107,Oklahoma City OK,35.5,-97.5,CEUS,D
+107,Oklahoma City OK,35.5,-97.5,CEUS,E
+108,Astoria OR,46.2,-123.85,PNW,BC
+108,Astoria OR,46.2,-123.85,PNW,C
+108,Astoria OR,46.2,-123.85,PNW,D
+108,Astoria OR,46.2,-123.85,PNW,E
+109,Bend OR,44.05,-121.3,PNW,BC
+109,Bend OR,44.05,-121.3,PNW,C
+109,Bend OR,44.05,-121.3,PNW,D
+109,Bend OR,44.05,-121.3,PNW,E
+110,Brookings OR,42.05,-124.25,PNW,BC
+110,Brookings OR,42.05,-124.25,PNW,C
+110,Brookings OR,42.05,-124.25,PNW,D
+110,Brookings OR,42.05,-124.25,PNW,E
+111,Coos Bay OR,43.4,-124.2,PNW,BC
+111,Coos Bay OR,43.4,-124.2,PNW,C
+111,Coos Bay OR,43.4,-124.2,PNW,D
+111,Coos Bay OR,43.4,-124.2,PNW,E
+112,Eugene OR,44.05,-123.1,PNW,BC
+112,Eugene OR,44.05,-123.1,PNW,C
+112,Eugene OR,44.05,-123.1,PNW,D
+112,Eugene OR,44.05,-123.1,PNW,E
+113,Hillsboro OR,45.5,-123,PNW,BC
+113,Hillsboro OR,45.5,-123,PNW,C
+113,Hillsboro OR,45.5,-123,PNW,D
+113,Hillsboro OR,45.5,-123,PNW,E
+114,Klamath Falls OR,42.2,-121.8,PNW,BC
+114,Klamath Falls OR,42.2,-121.8,PNW,C
+114,Klamath Falls OR,42.2,-121.8,PNW,D
+114,Klamath Falls OR,42.2,-121.8,PNW,E
+115,Medford OR,42.35,-122.9,PNW,BC
+115,Medford OR,42.35,-122.9,PNW,C
+115,Medford OR,42.35,-122.9,PNW,D
+115,Medford OR,42.35,-122.9,PNW,E
+116,Newport OR,44.65,-124.05,PNW,BC
+116,Newport OR,44.65,-124.05,PNW,C
+116,Newport OR,44.65,-124.05,PNW,D
+116,Newport OR,44.65,-124.05,PNW,E
+117,Pendleton OR,45.7,-118.8,PNW,BC
+117,Pendleton OR,45.7,-118.8,PNW,C
+117,Pendleton OR,45.7,-118.8,PNW,D
+117,Pendleton OR,45.7,-118.8,PNW,E
+118,Portland OR,45.5,-122.65,PNW,BC
+118,Portland OR,45.5,-122.65,PNW,C
+118,Portland OR,45.5,-122.65,PNW,D
+118,Portland OR,45.5,-122.65,PNW,E
+119,Salem OR,44.95,-123.05,PNW,BC
+119,Salem OR,44.95,-123.05,PNW,C
+119,Salem OR,44.95,-123.05,PNW,D
+119,Salem OR,44.95,-123.05,PNW,E
+120,Philadelphia PA,39.95,-75.15,CEUS,BC
+120,Philadelphia PA,39.95,-75.15,CEUS,C
+120,Philadelphia PA,39.95,-75.15,CEUS,D
+120,Philadelphia PA,39.95,-75.15,CEUS,E
+121,Pittsburg PA,40.45,-80,CEUS,BC
+121,Pittsburg PA,40.45,-80,CEUS,C
+121,Pittsburg PA,40.45,-80,CEUS,D
+121,Pittsburg PA,40.45,-80,CEUS,E
+122,Providence RI,41.8,-71.4,CEUS,BC
+122,Providence RI,41.8,-71.4,CEUS,C
+122,Providence RI,41.8,-71.4,CEUS,D
+122,Providence RI,41.8,-71.4,CEUS,E
+123,Charleston SC,32.8,-79.95,CEUS,BC
+123,Charleston SC,32.8,-79.95,CEUS,C
+123,Charleston SC,32.8,-79.95,CEUS,D
+123,Charleston SC,32.8,-79.95,CEUS,E
+124,Edgemont SD,43.3,-103.85,CEUS,BC
+124,Edgemont SD,43.3,-103.85,CEUS,C
+124,Edgemont SD,43.3,-103.85,CEUS,D
+124,Edgemont SD,43.3,-103.85,CEUS,E
+125,Platte SD,43.4,-98.85,CEUS,BC
+125,Platte SD,43.4,-98.85,CEUS,C
+125,Platte SD,43.4,-98.85,CEUS,D
+125,Platte SD,43.4,-98.85,CEUS,E
+126,Sioux Falls SD,43.55,-96.75,CEUS,BC
+126,Sioux Falls SD,43.55,-96.75,CEUS,C
+126,Sioux Falls SD,43.55,-96.75,CEUS,D
+126,Sioux Falls SD,43.55,-96.75,CEUS,E
+127,Chattanooga TN,35.05,-85.25,CEUS,BC
+127,Chattanooga TN,35.05,-85.25,CEUS,C
+127,Chattanooga TN,35.05,-85.25,CEUS,D
+127,Chattanooga TN,35.05,-85.25,CEUS,E
+128,Knoxville TN,35.95,-83.9,CEUS,BC
+128,Knoxville TN,35.95,-83.9,CEUS,C
+128,Knoxville TN,35.95,-83.9,CEUS,D
+128,Knoxville TN,35.95,-83.9,CEUS,E
+129,Maryville TN,35.75,-84,CEUS,BC
+129,Maryville TN,35.75,-84,CEUS,C
+129,Maryville TN,35.75,-84,CEUS,D
+129,Maryville TN,35.75,-84,CEUS,E
+130,Memphis TN,35.15,-90.05,CEUS,BC
+130,Memphis TN,35.15,-90.05,CEUS,C
+130,Memphis TN,35.15,-90.05,CEUS,D
+130,Memphis TN,35.15,-90.05,CEUS,E
+131,Amarillo TX,35.2,-101.85,CEUS,BC
+131,Amarillo TX,35.2,-101.85,CEUS,C
+131,Amarillo TX,35.2,-101.85,CEUS,D
+131,Amarillo TX,35.2,-101.85,CEUS,E
+132,Dallas TX,32.8,-96.8,CEUS,BC
+132,Dallas TX,32.8,-96.8,CEUS,C
+132,Dallas TX,32.8,-96.8,CEUS,D
+132,Dallas TX,32.8,-96.8,CEUS,E
+133,Houston TX,29.75,-95.35,CEUS,BC
+133,Houston TX,29.75,-95.35,CEUS,C
+133,Houston TX,29.75,-95.35,CEUS,D
+133,Houston TX,29.75,-95.35,CEUS,E
+134,Kermit TX,31.85,-103.1,CEUS,BC
+134,Kermit TX,31.85,-103.1,CEUS,C
+134,Kermit TX,31.85,-103.1,CEUS,D
+134,Kermit TX,31.85,-103.1,CEUS,E
+135,San Antonio TX,29.4,-98.5,CEUS,BC
+135,San Antonio TX,29.4,-98.5,CEUS,C
+135,San Antonio TX,29.4,-98.5,CEUS,D
+135,San Antonio TX,29.4,-98.5,CEUS,E
+136,Snyder TX,32.7,-100.9,CEUS,BC
+136,Snyder TX,32.7,-100.9,CEUS,C
+136,Snyder TX,32.7,-100.9,CEUS,D
+136,Snyder TX,32.7,-100.9,CEUS,E
+137,Brigham City UT,41.5,-112,WUS,BC
+137,Brigham City UT,41.5,-112,WUS,C
+137,Brigham City UT,41.5,-112,WUS,D
+137,Brigham City UT,41.5,-112,WUS,E
+138,Cedar City UT,37.7,-113.05,WUS,BC
+138,Cedar City UT,37.7,-113.05,WUS,C
+138,Cedar City UT,37.7,-113.05,WUS,D
+138,Cedar City UT,37.7,-113.05,WUS,E
+139,Green River UT,39,-110.15,WUS,BC
+139,Green River UT,39,-110.15,WUS,C
+139,Green River UT,39,-110.15,WUS,D
+139,Green River UT,39,-110.15,WUS,E
+140,Provo UT,40.25,-111.65,WUS,BC
+140,Provo UT,40.25,-111.65,WUS,C
+140,Provo UT,40.25,-111.65,WUS,D
+140,Provo UT,40.25,-111.65,WUS,E
+141,Salt Lake City UT,40.75,-111.9,WUS,BC
+141,Salt Lake City UT,40.75,-111.9,WUS,C
+141,Salt Lake City UT,40.75,-111.9,WUS,D
+141,Salt Lake City UT,40.75,-111.9,WUS,E
+142,Blacksburg VA,37.25,-80.4,CEUS,BC
+142,Blacksburg VA,37.25,-80.4,CEUS,C
+142,Blacksburg VA,37.25,-80.4,CEUS,D
+142,Blacksburg VA,37.25,-80.4,CEUS,E
+143,Richmond VA,37.55,-77.45,CEUS,BC
+143,Richmond VA,37.55,-77.45,CEUS,C
+143,Richmond VA,37.55,-77.45,CEUS,D
+143,Richmond VA,37.55,-77.45,CEUS,E
+144,Burlington VT,44.5,-73.2,CEUS,BC
+144,Burlington VT,44.5,-73.2,CEUS,C
+144,Burlington VT,44.5,-73.2,CEUS,D
+144,Burlington VT,44.5,-73.2,CEUS,E
+145,Aberdeen WA,47,-123.8,PNW,BC
+145,Aberdeen WA,47,-123.8,PNW,C
+145,Aberdeen WA,47,-123.8,PNW,D
+145,Aberdeen WA,47,-123.8,PNW,E
+146,Bellingham WA,48.75,-122.5,PNW,BC
+146,Bellingham WA,48.75,-122.5,PNW,C
+146,Bellingham WA,48.75,-122.5,PNW,D
+146,Bellingham WA,48.75,-122.5,PNW,E
+147,Ellensburg WA,47,-120.55,PNW,BC
+147,Ellensburg WA,47,-120.55,PNW,C
+147,Ellensburg WA,47,-120.55,PNW,D
+147,Ellensburg WA,47,-120.55,PNW,E
+148,Everett WA,48,-122.2,PNW,BC
+148,Everett WA,48,-122.2,PNW,C
+148,Everett WA,48,-122.2,PNW,D
+148,Everett WA,48,-122.2,PNW,E
+149,Hanford Site WA,46.55,-119.6,PNW,BC
+149,Hanford Site WA,46.55,-119.6,PNW,C
+149,Hanford Site WA,46.55,-119.6,PNW,D
+149,Hanford Site WA,46.55,-119.6,PNW,E
+150,Olympia WA,47.05,-122.9,PNW,BC
+150,Olympia WA,47.05,-122.9,PNW,C
+150,Olympia WA,47.05,-122.9,PNW,D
+150,Olympia WA,47.05,-122.9,PNW,E
+151,Seattle WA,47.6,-122.3,PNW,BC
+151,Seattle WA,47.6,-122.3,PNW,C
+151,Seattle WA,47.6,-122.3,PNW,D
+151,Seattle WA,47.6,-122.3,PNW,E
+152,Spokane WA,47.65,-117.4,PNW,BC
+152,Spokane WA,47.65,-117.4,PNW,C
+152,Spokane WA,47.65,-117.4,PNW,D
+152,Spokane WA,47.65,-117.4,PNW,E
+153,Tacoma WA,47.25,-122.45,PNW,BC
+153,Tacoma WA,47.25,-122.45,PNW,C
+153,Tacoma WA,47.25,-122.45,PNW,D
+153,Tacoma WA,47.25,-122.45,PNW,E
+154,Yakima WA,46.6,-120.5,PNW,BC
+154,Yakima WA,46.6,-120.5,PNW,C
+154,Yakima WA,46.6,-120.5,PNW,D
+154,Yakima WA,46.6,-120.5,PNW,E
+155,Milwaukee WI,43.05,-87.9,CEUS,BC
+155,Milwaukee WI,43.05,-87.9,CEUS,C
+155,Milwaukee WI,43.05,-87.9,CEUS,D
+155,Milwaukee WI,43.05,-87.9,CEUS,E
+156,Charleston WV,38.35,-81.65,CEUS,BC
+156,Charleston WV,38.35,-81.65,CEUS,C
+156,Charleston WV,38.35,-81.65,CEUS,D
+156,Charleston WV,38.35,-81.65,CEUS,E
+157,Casper WY,42.85,-106.3,WUS,BC
+157,Casper WY,42.85,-106.3,WUS,C
+157,Casper WY,42.85,-106.3,WUS,D
+157,Casper WY,42.85,-106.3,WUS,E
+158,Cheyenne WY,41.15,-104.8,WUS,BC
+158,Cheyenne WY,41.15,-104.8,WUS,C
+158,Cheyenne WY,41.15,-104.8,WUS,D
+158,Cheyenne WY,41.15,-104.8,WUS,E
+159,Jackson WY,43.5,-110.75,WUS,BC
+159,Jackson WY,43.5,-110.75,WUS,C
+159,Jackson WY,43.5,-110.75,WUS,D
+159,Jackson WY,43.5,-110.75,WUS,E
+160,Yellowstone WY,44.4,-110.55,WUS,BC
+160,Yellowstone WY,44.4,-110.55,WUS,C
+160,Yellowstone WY,44.4,-110.55,WUS,D
+160,Yellowstone WY,44.4,-110.55,WUS,E

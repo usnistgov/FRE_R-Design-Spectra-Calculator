@@ -1,0 +1,11 @@
+*.mat
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+build/
+.pytest_cache/
+
+# Generated data and results
+results/
