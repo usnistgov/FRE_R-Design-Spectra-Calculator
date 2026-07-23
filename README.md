@@ -5,10 +5,8 @@ Risk-targeted **Functional Recovery Earthquake (FREr)** design value calculator.
 This tool pulls seismic hazard curves and code design values from USGS web
 services ([design maps](https://earthquake.usgs.gov/ws/designmaps/),
 [nshmp hazard](https://earthquake.usgs.gov/ws/nshmp/)), then develops
-risk-targeted multi-period and 2-point design spectra for both the Functional
-Recovery (FR) and Life Safety / Design Earthquake (DE) performance objectives.
-It is a Python port of an original set of MATLAB scripts (preserved in the git
-history at the initial commit).
+risk-targeted multi-period and 2-point design spectra for the Functional
+Recovery Earthquake as documented in the 2026 NEHRP Seismic Provisions.
 
 ## Background
 
@@ -17,10 +15,10 @@ design. For each site and spectral period, the tool integrates a lognormal
 fragility curve with the site hazard curve to find the ground-motion anchor
 that produces a target lifetime risk of exceedance (the RTGM approach):
 
-| Objective | β | PoE at anchor | Risk target | Timespan | Direction |
+| Design Value | β | PoE at anchor | Risk target | Timespan | Direction |
 |---|---|---|---|---|---|
-| **FR (FREr)** | 0.6 | 25% | 10% | 50 yr | RotD50 (no conversion) |
-| **LS / DE (ASCE 7-28)** | 0.6 | 10% | 1.5% | 50 yr | RotD100 (max-direction factors) |
+| **FRE<sub>R</sub> (NERHP 2026)** | 0.6 | 25% | 10% | 50 yr | RotD50 (no conversion) |
+| **MCE<sub>R</sub> (ASCE 7-28)** | 0.6 | 10% | 1.5% | 50 yr | RotD100 (max-direction factors) |
 
 Two code versions are supported:
 
@@ -174,8 +172,6 @@ and prints what changed. It never pulls from USGS and never touches
 Review with `git diff -- tests/` and commit deliberately; when the reference
 becomes the Python output, prune any now-obsolete `KNOWN_EXCEPTIONS`.
 
-See [VALIDATION.md](VALIDATION.md) for the original MATLAB-vs-Python comparison.
-
 ## Development
 
 Install the dev tools (linter, formatter, spell checker, pytest):
@@ -198,13 +194,3 @@ All four are configured in [pyproject.toml](pyproject.toml): `ruff` uses an
 88-column line length with pycodestyle/Pyflakes/isort/pyupgrade/bugbear rules;
 `codespell` skips data artifacts and the cache and whitelists domain terms
 (e.g. `afe`, `nshm`).
-
-## Notes on the port
-
-- The original MATLAB scripts (`pull_hazard_values.m`, `calc_FREr.m`,
-  `+usgs/*.m`) are preserved at the initial git commit.
-- The MATLAB `.mat` cache was replaced with the JSON-per-site cache.
-- Dead/disabled MATLAB code was not ported: the unused
-  `fn_max_to_geomean` helper, the commented-out return-period
-  quantification (`frer_return_periods.csv`), and the stacked return-period
-  histogram plots.
