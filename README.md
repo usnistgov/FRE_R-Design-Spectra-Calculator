@@ -1,6 +1,6 @@
 # FREr Calculator
 
-Risk-targeted **Functional Recovery Earthquake (FREr)** design value calculator.
+Risk-targeted **Functional Recovery Earthquake (FRE<sub>R</sub>)** design value calculator.
 
 This tool pulls seismic hazard curves and code design values from USGS web
 services ([design maps](https://earthquake.usgs.gov/ws/designmaps/),
@@ -10,7 +10,7 @@ Recovery Earthquake as documented in the 2026 NEHRP Seismic Provisions.
 
 ## Background
 
-The FREr is a risk-targeted ground motion intended for functional-recovery
+The FRE<sub>R</sub> is a risk-targeted ground motion intended for functional-recovery
 design. For each site and spectral period, the tool integrates a lognormal
 fragility curve with the site hazard curve to find the ground-motion anchor
 that produces a target lifetime risk of exceedance (the RTGM approach):
@@ -26,7 +26,7 @@ Two code versions are supported:
   DE values (S<sub>DS</sub>, S<sub>D1</sub>, multi-period design spectrum) are
   taken directly from the USGS ASCE 7-22 design-maps service.
 - **ASCE 7-28** — both FREr and DE spectra are computed fully probabilistically
-  from **NSHM 2023** hazard curves (DE = 2/3 × the risk-targeted LS spectrum).
+  from **NSHM 2023** hazard curves (DE = 2/3 × the MCE<sub>R</sub> spectrum).
 
 From each multi-period spectrum, 2-point design values are derived per
 ASCE 7-22 §21.4:
@@ -143,10 +143,7 @@ recomputes each site set from the frozen cache and asserts the **FREr values**
 (`Sdsfr`, `Sd1fr`, and the `frer_mps_*` spectrum) match the reference within a
 2% tolerance. It deliberately does **not** check `Sds`/`Sd1`: for ASCE 7-22
 those are returned by the USGS design-maps service, which is the source of truth
-for its own output, so drift there is not a calculator regression. A small,
-enumerated set of rows is exempt via the `KNOWN_EXCEPTIONS` table (each due to a
-USGS input change, cross-checked in [VALIDATION.md](VALIDATION.md)). A site set
-with no committed cache (e.g. `usgs_160`) is skipped until you `frer pull` it.
+for its own output, so drift there is not a calculator regression.
 
 `test_pull.py` checks the **pull path's resilience** (not the returned values):
 against a local stub HTTP server it verifies that rate-limit/5xx/timeout
@@ -169,8 +166,7 @@ python scripts/update_fixtures.py --site-set nehrp_34
 It recomputes `frer_design_vals.csv` in place under `tests/<site_set>/<version>/`
 and prints what changed. It never pulls from USGS and never touches
 `tests/usgs_cache/` (refreshing that cache is a separate, manual `frer pull`).
-Review with `git diff -- tests/` and commit deliberately; when the reference
-becomes the Python output, prune any now-obsolete `KNOWN_EXCEPTIONS`.
+Review with `git diff -- tests/` and commit deliberately.
 
 ## Development
 
