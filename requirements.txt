@@ -1,5 +1,13 @@
+# Runtime dependencies for the Streamlit web app (app.py). Streamlit Community
+# Cloud installs this file, so it also installs the calculator itself -- the
+# `frer` package lives under src/ and is not importable without it.
+#
+# The library's own dependencies are declared in pyproject.toml; the first five
+# lines here mirror them for anyone installing without pip's build step.
 numpy
 scipy
 pandas
 matplotlib
 requests
+streamlit
+.

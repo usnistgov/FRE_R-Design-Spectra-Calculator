@@ -11,9 +11,9 @@ from pathlib import Path
 import pandas as pd
 
 from . import cache, plots
-from .params import FR_PARAMS, LS_PARAMS, VERSION_NSHM
+from .params import VERSION_NSHM
+from .single import calc_site, frer_mps_columns
 from .sites import load_sites, site_class_list
-from .spectrum import develop_2point_design_values, develop_rt_spectrum
 
 
 def calc_design_values(
@@ -68,29 +68,7 @@ def calc_design_values(
                     )
                     continue
                 raise FileNotFoundError(f"{msg}: run `frer pull` first")
-            hazard_curves = entry["hazard_curves"][str(nshm)]
-
-            # Develop design spectrum based on FR risk-target values
-            rt_spectrum_fr = develop_rt_spectrum(hazard_curves, FR_PARAMS)
-
-            # Develop the DE (LS) spectrum
-            if version_id == "ASCE 7-28":
-                # Fully probabilistic MPS from the hazard curves
-                rt_spectrum_ls = develop_rt_spectrum(hazard_curves, LS_PARAMS)
-                ls_period = rt_spectrum_ls.period
-                ls_sa_de = (2 / 3) * rt_spectrum_ls.sa
-                sds, sd1 = develop_2point_design_values(ls_sa_de, ls_period)
-            else:  # ASCE 7-22: use the design-value web service results directly
-                dv = entry["design_values"]["response"]["data"]
-                ls_period = dv["multiPeriodDesignSpectrum"]["periods"]
-                ls_sa_de = dv["multiPeriodDesignSpectrum"]["ordinates"]
-                sds = dv["sds"]
-                sd1 = dv["sd1"]
-
-            # 2-point design values for FREr
-            sdsfr, sd1fr = develop_2point_design_values(
-                rt_spectrum_fr.sa, rt_spectrum_fr.period
-            )
+            result = calc_site(entry, version_id)
 
             row = {
                 "id": int(site[f"{site_set}_id"]),
@@ -99,33 +77,21 @@ def calc_design_values(
                 "lon": site["lon"],
                 "region": site["region"],
                 "site_class": site_class,
-                "Sds": sds,
-                "Sd1": sd1,
-                "Sdsfr": sdsfr,
-                "Sd1fr": sd1fr,
+                "Sds": result.sds,
+                "Sd1": result.sd1,
+                "Sdsfr": result.sdsfr,
+                "Sd1fr": result.sd1fr,
             }
 
             # Add multi-period FREr spectrum values for the testbed cases
             if site_set == "frtc_testbed":
-                for t, sa in zip(rt_spectrum_fr.period, rt_spectrum_fr.sa, strict=True):
-                    t_str = f"{t:4.2f}".replace(".", "p")
-                    row[f"frer_mps_{t_str}"] = sa
+                row.update(frer_mps_columns(result.fr_spectrum))
             rows.append(row)
 
             # Spectra plots for the NEHRP and testbed site sets
             if make_plots and site_set in ("nehrp_34", "frtc_testbed"):
                 plots.plot_spectra(
-                    save_dir / "Spectra_Plots - loglog",
-                    site["name"],
-                    site_class,
-                    version_id,
-                    rt_spectrum_fr,
-                    ls_period,
-                    ls_sa_de,
-                    sds,
-                    sd1,
-                    sdsfr,
-                    sd1fr,
+                    save_dir / "Spectra_Plots - loglog", site["name"], result
                 )
 
     table = pd.DataFrame(rows)

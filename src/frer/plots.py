@@ -7,6 +7,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
+
+from .spectrum import two_point_spectrum
 
 # MATLAB default color order
 CMAP = [
@@ -20,41 +23,19 @@ CMAP = [
 ]
 
 
-def _two_point_spectrum(sds: float, sd1: float):
-    """Build the 2-point code spectrum polyline (T, Sa) for plotting."""
-    ts = sd1 / sds
-    t0 = 0.2 * ts
-    t_range = np.arange(ts + 0.1, 5.0 + 1e-9, 0.1)
-    t_vals = np.concatenate([[0.01, t0, ts], t_range])  # 0.01 for log axis
-    sa_vals = np.concatenate([[0.4 * sds, sds, sds], sd1 / t_range])
-    return t_vals, sa_vals
+def draw_spectra(ax, result):
+    """Draw one site's DE and FREr spectra, multi-period and 2-point, on ``ax``.
 
+    ``result`` is a :class:`frer.single.SiteResult`.
+    """
+    fr_t, fr_sa = two_point_spectrum(result.sdsfr, result.sd1fr)
+    ls_t, ls_sa = two_point_spectrum(result.sds, result.sd1)
 
-def plot_spectra(
-    plot_dir: Path,
-    site_name: str,
-    site_class: str,
-    version_id: str,
-    rt_spectrum_fr,
-    ls_period,
-    ls_sa_de,
-    sds: float,
-    sd1: float,
-    sdsfr: float,
-    sd1fr: float,
-):
-    """Log-log plot of the DE and FREr multi-point and 2-point spectra."""
-    plot_dir.mkdir(parents=True, exist_ok=True)
-
-    fr_t, fr_sa = _two_point_spectrum(sdsfr, sd1fr)
-    ls_t, ls_sa = _two_point_spectrum(sds, sd1)
-
-    fig, ax = plt.subplots()
-    ax.loglog(ls_period, ls_sa_de, "-k", label="DE: MPS")
+    ax.loglog(result.de_period, result.de_sa, "-k", label="DE: MPS")
     ax.loglog(ls_t, ls_sa, "--k", label="DE: 2-point")
     ax.loglog(
-        rt_spectrum_fr.period,
-        rt_spectrum_fr.sa,
+        result.fr_spectrum.period,
+        result.fr_spectrum.sa,
         "-",
         color=CMAP[0],
         label="FRE$_R$: MPS",
@@ -66,9 +47,34 @@ def plot_spectra(
     ax.set_ylabel("Sa (g)")
     ax.legend(loc="lower left")
     ax.grid(True, which="both", alpha=0.4)
-    ax.set_title(f"{version_id}: Site Class {site_class}")
-    fig.savefig(plot_dir / f"{site_name} - Site Class {site_class}.png", dpi=150)
-    plt.close(fig)
+    ax.set_title(f"{result.version_id}: Site Class {result.site_class}")
+
+
+def build_spectra_figure(results):
+    """Build a log-log spectra figure, one panel per code version.
+
+    ``results`` is a sequence of :class:`frer.single.SiteResult` for the same
+    site. Comparing versions gets a panel each rather than eight lines on one
+    axes, so each panel stays as readable as the single-version plot.
+
+    Built as a bare :class:`~matplotlib.figure.Figure` rather than through
+    ``pyplot`` so it never enters pyplot's global registry: callers get a figure
+    they own outright, with nothing to close and no shared state to trip over.
+    """
+    results = list(results)
+    fig = Figure(figsize=(6.4 * len(results), 4.8))
+    axes = fig.subplots(1, len(results), squeeze=False)
+    for ax, result in zip(axes[0], results, strict=True):
+        draw_spectra(ax, result)
+    fig.tight_layout()
+    return fig
+
+
+def plot_spectra(plot_dir: Path, site_name: str, result):
+    """Save a single-site, single-version spectra plot as a PNG."""
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    fig = build_spectra_figure([result])
+    fig.savefig(plot_dir / f"{site_name} - Site Class {result.site_class}.png", dpi=150)
 
 
 def plot_scatter_comparisons(plot_dir: Path, table):

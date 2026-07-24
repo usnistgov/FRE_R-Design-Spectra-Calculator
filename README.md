@@ -34,6 +34,9 @@ ASCE 7-22 §21.4:
 - S<sub>DS</sub> = 0.9 × max Sa over 0.2 s ≤ T ≤ 5 s
 - S<sub>D1</sub> = max( Sa(1.0 s), 0.9 × max(T·Sa) over 1 s ≤ T ≤ 2 s )
 
+
+
+
 ## Installation
 
 Requires Python ≥ 3.10.
@@ -44,8 +47,10 @@ python -m venv .venv
 # .venv/bin/pip install -e .          # macOS / Linux
 ```
 
-This installs the `frer` console command and all dependencies
-(also listed in [requirements.txt](requirements.txt)).
+This installs the `frer` console command and all dependencies. Add `streamlit`
+for the web app, or install [requirements.txt](requirements.txt), which pins the
+app's full runtime (the library dependencies, Streamlit, and the package
+itself).
 
 ## Usage
 
@@ -100,9 +105,42 @@ Outputs are written under `results/<site_set>/<version>/`:
 Use `--no-plots` to skip figures, `--out-dir` / `--cache-dir` to relocate
 outputs and cache.
 
+## Web app
+
+For a single site, the calculator runs as a [Streamlit](https://streamlit.io)
+app. [app.py](app.py) performs both stages (pull, then calc) for one location
+and displays the FREr and DE design values, an interactive spectra chart, the
+multi-period ordinates, and a downloadable CSV. Every option is exposed: code
+version (ASCE 7-22, 7-28, or both side by side), site class, v<sub>S30</sub>,
+and risk category.
+
+The site is chosen one of two ways:
+
+- **Custom coordinates** — any latitude/longitude in the conterminous U.S.,
+  fetched live from USGS (see the timing note below).
+- **From a precomputed site list** — the `nehrp_34` benchmark sites, answered
+  instantly and offline from the frozen USGS responses committed under
+  `tests/usgs_cache/`. No network call is made, so these always work and return
+  in well under a second. (The larger `usgs_160` set can join this list once its
+  fixtures are committed.)
+
+Streamlit is a Python web framework, so the app always runs on a Python host —
+either your own machine or a server. To run it locally, follow
+[Installation](#installation) below (including `streamlit`), then:
+
+```bash
+streamlit run app.py
+```
+
+**Conterminous U.S. only.** The NSHM models cover latitude 24.4–50.0 and
+longitude −125.0 to −65.0. Coordinates outside that box are rejected before
+any request is made, because the hazard service answers them with a success
+status and unusable curves.
+
 ## Project layout
 
 ```
+├── app.py                     # Streamlit single-site web app
 ├── sites.csv                  # site table with site-set membership
 ├── src/frer/
 │   ├── cli.py                 # `frer` command-line interface
@@ -111,6 +149,7 @@ outputs and cache.
 │   ├── cache.py               # JSON-per-site cache
 │   ├── rtgm.py                # risk-targeted ground motion integration
 │   ├── spectrum.py            # RT spectra + 2-point design values
+│   ├── single.py              # single-site pull/calc (used by calc.py and app.py)
 │   ├── calc.py                # design-value workflow / CSV output
 │   ├── plots.py               # spectra and scatter plots
 │   ├── sites.py               # sites.csv loading and site-set expansion
@@ -120,6 +159,7 @@ outputs and cache.
 ├── tests/
 │   ├── test_spectrum.py       # unit tests for the spectrum math
 │   ├── test_benchmark.py      # benchmark FREr values vs the reference
+│   ├── test_single.py         # single-site API vs the reference + input guards
 │   ├── test_pull.py           # pull resilience (retry/backoff) tests
 │   ├── conftest.py            # `network` marker / --run-network option
 │   ├── usgs_cache/            # frozen USGS responses (benchmark input)
