@@ -16,7 +16,12 @@ from urllib3.util.retry import Retry
 
 from . import __version__
 
-DESIGN_MAPS_URL = "https://earthquake.usgs.gov/ws/designmaps/{reference_doc}.json"
+# The older /ws/designmaps/{doc}.json path still works but 301s here (via a
+# plain-http hop), so call the current endpoint directly. The response schema is
+# unchanged: the design values live under response.data.
+DESIGN_MAPS_URL = (
+    "https://earthquake.usgs.gov/ws/building-codes/{reference_doc}/calculate"
+)
 HAZARD_URL = (
     "https://earthquake.usgs.gov/ws/nshmp/conus-{edition}/dynamic/hazard/"
     "{lon:.2f}/{lat:.2f}/{vs30:d}"

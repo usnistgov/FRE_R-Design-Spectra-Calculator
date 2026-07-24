@@ -93,6 +93,22 @@ def develop_rt_spectrum(hazard_curves: list, rt_params: RiskTargetParams) -> RTS
     return spec
 
 
+def two_point_spectrum(sds: float, sd1: float, t_start: float = 0.01):
+    """Build the 2-point code spectrum polyline (T, Sa) from Sds and Sd1.
+
+    The flat branch runs to ``Ts = Sd1/Sds`` and the descending branch follows
+    ``Sd1/T`` out to 5 s. ``t_start`` is where the initial ramp begins: the
+    spectrum is defined from T = 0, but a log-scaled plot cannot show zero, so
+    it defaults to 0.01 s. Pass 0.0 on a linear axis.
+    """
+    ts = sd1 / sds
+    t0 = 0.2 * ts
+    t_range = np.arange(ts + 0.1, 5.0 + 1e-9, 0.1)
+    t_vals = np.concatenate([[t_start, t0, ts], t_range])
+    sa_vals = np.concatenate([[0.4 * sds, sds, sds], sd1 / t_range])
+    return t_vals, sa_vals
+
+
 def develop_2point_design_values(sa: np.ndarray, period: np.ndarray):
     """Calculate two-point spectral design values per ASCE 7-22 Section 21.4.
 

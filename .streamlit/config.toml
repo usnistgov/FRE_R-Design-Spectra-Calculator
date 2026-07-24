@@ -1,0 +1,9 @@
+# Streamlit settings for app.py. Read automatically on startup, both locally
+# and on Streamlit Community Cloud.
+
+[theme]
+# Pin the light theme rather than following the viewer's OS setting. The spectra
+# charts are styled by Streamlit's own chart theme, which is built for a light
+# background; under the dark theme the plot area goes dark and the design
+# spectra no longer read the way the figures in the NEHRP Provisions do.
+base = "light"

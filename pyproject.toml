@@ -52,5 +52,6 @@ select = ["E", "W", "F", "I", "UP", "B", "C4", "N"]
 # Skip binary/data artifacts, build output, and the cache; check source + docs.
 skip = "*.csv,*.json,*.png,*.xlsx,*.mat,./.git,./.venv,./results,./tests/usgs_cache,*.egg-info"
 # Domain terms and false positives (comma-separated). afe = annual frequency of
-# exceedance; nshm = National Seismic Hazard Model.
-ignore-words-list = "afe,nshm,ba,fpr,mors"
+# exceedance; nshm = National Seismic Hazard Model; patter = the DOI prefix of
+# the journal Patterns, cited in fair-software.md.
+ignore-words-list = "afe,nshm,ba,fpr,mors,patter"
