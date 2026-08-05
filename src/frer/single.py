@@ -50,6 +50,7 @@ class SiteResult:
     fr_spectrum: RTSpectrum  # FREr multi-period spectrum
     de_period: np.ndarray  # DE multi-period spectrum periods (s)
     de_sa: np.ndarray  # DE multi-period spectrum ordinates (g)
+    ls_spectrum: RTSpectrum | None = None  # MCEr spectrum (ASCE 7-28 only)
 
     @property
     def nshm(self) -> int:
@@ -198,6 +199,7 @@ def calc_site(entry: dict, version_id: str) -> SiteResult:
         ls_sa_de = (2 / 3) * rt_spectrum_ls.sa
         sds, sd1 = develop_2point_design_values(ls_sa_de, ls_period)
     else:  # ASCE 7-22: use the design-value web service results directly
+        rt_spectrum_ls = None  # no probabilistic LS spectrum for ASCE 7-22
         dv = entry["design_values"]["response"]["data"]
         ls_period = dv["multiPeriodDesignSpectrum"]["periods"]
         ls_sa_de = dv["multiPeriodDesignSpectrum"]["ordinates"]
@@ -224,6 +226,7 @@ def calc_site(entry: dict, version_id: str) -> SiteResult:
         fr_spectrum=rt_spectrum_fr,
         de_period=ls_period,
         de_sa=ls_sa_de,
+        ls_spectrum=rt_spectrum_ls,
     )
 
 
@@ -237,4 +240,38 @@ def frer_mps_columns(spectrum: RTSpectrum) -> dict:
     for t, sa in zip(spectrum.period, spectrum.sa, strict=True):
         t_str = f"{t:4.2f}".replace(".", "p")
         columns[f"frer_mps_{t_str}"] = sa
+    return columns
+
+
+# Periods (s) at which return periods are reported, per the MATLAB block
+# "Quantify Return Periods of Spectral Values at specific periods".
+RP_PERIODS = (0.2, 1.0)
+
+
+def _rp_at(values: np.ndarray, period: np.ndarray, t: float) -> float:
+    """Return the array value at period ``t`` (an exact member of ``T_VEC``)."""
+    return float(values[period == t][0])
+
+
+def return_period_columns(result: SiteResult) -> dict:
+    """Return-period CSV columns (years) at 0.2 s and 1.0 s.
+
+    Reports the hazard-curve return period of the FRE_R, MCE_R, and DE spectral
+    ordinates (DE is 2/3 of MCE_R). Empty for ASCE 7-22: return periods are only
+    defined for the fully probabilistic ASCE 7-28 ground motions, whereas the
+    ASCE 7-22 design values mix risk-targeted and deterministic caps that have no
+    single hazard-curve return period.
+
+    Shared by the batch CSV writer and the single-site export so the two cannot
+    drift apart in how they name columns.
+    """
+    if result.ls_spectrum is None:
+        return {}
+    fr, ls = result.fr_spectrum, result.ls_spectrum
+    columns = {}
+    for t in RP_PERIODS:
+        t_str = f"{t:.1f}".replace(".", "p")  # 0.2 -> "0p2", 1.0 -> "1p0"
+        columns[f"frer_rp_{t_str}"] = _rp_at(fr.return_period, fr.period, t)
+        columns[f"mcer_rp_{t_str}"] = _rp_at(ls.return_period, ls.period, t)
+        columns[f"de_rp_{t_str}"] = _rp_at(ls.return_period_67, ls.period, t)
     return columns

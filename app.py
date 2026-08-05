@@ -24,7 +24,13 @@ from frer.params import (
     VERSION_NSHM,
     VS30_RANGE,
 )
-from frer.single import calc_site, frer_mps_columns, pull_site
+from frer.single import (
+    RP_PERIODS,
+    calc_site,
+    frer_mps_columns,
+    pull_site,
+    return_period_columns,
+)
 from frer.sites import load_sites
 from frer.spectrum import two_point_spectrum
 
@@ -290,6 +296,7 @@ def summary_frame(results) -> pd.DataFrame:
             "Sd1fr": result.sd1fr,
         }
         row.update(frer_mps_columns(result.fr_spectrum))
+        row.update(return_period_columns(result))
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -409,6 +416,35 @@ def _ratio_to_de(frer_value: float, de_value: float) -> str | None:
     return f"{frer_value / de_value - 1:+.0%} vs DE"
 
 
+# Ground-motion column prefixes (see frer.single.return_period_columns) and the
+# labels used to present them as table rows. LaTeX subscripts (matching the page
+# title and the metric labels) render via st.markdown -- st.dataframe would print
+# the raw "$" markup, so the return-period table is emitted as Markdown below.
+GM_RP_LABELS = {"frer": "FRE$_R$", "mcer": "MCE$_R$", "de": "DE"}
+
+
+def return_period_markdown(result) -> str | None:
+    """Return periods (years) as a Markdown table string, or None for ASCE 7-22.
+
+    Rendered with st.markdown rather than st.dataframe so the ground-motion
+    labels show their subscripts (FRE_R, MCE_R) as LaTeX; a dataframe prints the
+    raw markup. None when there are no return periods (ASCE 7-22).
+    """
+    cols = return_period_columns(result)
+    if not cols:
+        return None
+    header = "| | " + " | ".join(f"{t:.1f} s" for t in RP_PERIODS) + " |"
+    sep = "|" + "---|" * (len(RP_PERIODS) + 1)
+    lines = [header, sep]
+    for gm, label in GM_RP_LABELS.items():
+        cells = []
+        for t in RP_PERIODS:
+            value = cols[f"{gm}_rp_{f'{t:.1f}'.replace('.', 'p')}"]
+            cells.append("n/a" if pd.isna(value) else f"{value:.0f}")
+        lines.append(f"| {label} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
 def show_results(results):
     """Render metrics, the spectra plot, the period table, and a CSV download."""
     for result in results:
@@ -428,6 +464,24 @@ def show_results(results):
             delta=_ratio_to_de(result.sd1fr, result.sd1),
             delta_color="off",
         )
+
+        rp_table = return_period_markdown(result)
+        st.markdown("**Return periods (years)**")
+        if rp_table is not None:
+            st.markdown(rp_table)
+            if result.site_class == "E":
+                st.warning(
+                    "Site class E (soft soil) sites often have steep hazard "
+                    "curves. Therefore, the calculated return periods can be "
+                    "quite sensitive to small variations in spectral value.",
+                    icon="⚠️",
+                )
+        else:
+            st.caption(
+                "Not defined for ASCE 7-22: its design values mix risk-targeted "
+                "and deterministic caps that have no single hazard-curve return "
+                "period. Select ASCE 7-28 for return periods."
+            )
 
     st.subheader("Design spectra")
     # A single y limit across versions, so the panels can be compared directly.

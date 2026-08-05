@@ -12,7 +12,7 @@ import pandas as pd
 
 from . import cache, plots
 from .params import VERSION_NSHM
-from .single import calc_site, frer_mps_columns
+from .single import calc_site, frer_mps_columns, return_period_columns
 from .sites import load_sites, site_class_list
 
 
@@ -86,6 +86,8 @@ def calc_design_values(
             # Add multi-period FREr spectrum values for the testbed cases
             if site_set == "frtc_testbed":
                 row.update(frer_mps_columns(result.fr_spectrum))
+            # Return periods of the FRE_R/MCE_R/DE ordinates (ASCE 7-28 only)
+            row.update(return_period_columns(result))
             rows.append(row)
 
             # Spectra plots for the NEHRP and testbed site sets
