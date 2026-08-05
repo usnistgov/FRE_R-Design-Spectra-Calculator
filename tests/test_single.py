@@ -8,6 +8,7 @@ before any network call, and that ``pull_site`` asks for exactly the data a
 given code version needs.
 """
 
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -16,12 +17,14 @@ import pytest
 from frer.cache import load_entry
 from frer.params import NSHM_BOUNDS, VERSION_NSHM
 from frer.single import (
+    RP_PERIODS,
     calc_site,
     check_location,
     check_vs30,
     frer_mps_columns,
     new_entry,
     pull_site,
+    return_period_columns,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -79,6 +82,41 @@ def test_calc_site_carries_site_metadata():
     # DE and FREr spectra are both usable for plotting.
     assert len(result.de_period) == len(result.de_sa)
     assert len(result.fr_spectrum.period) == len(result.fr_spectrum.sa)
+
+
+def test_return_period_columns_asce728():
+    """ASCE 7-28 exposes FRE_R/MCE_R/DE return periods at 0.2 s and 1.0 s."""
+    entry = load_entry(CACHE_DIR, SITE_ID, SITE_CLASS)
+    if entry is None:
+        pytest.skip(f"no frozen cache for site {SITE_ID} class {SITE_CLASS}")
+
+    result = calc_site(entry, "ASCE 7-28")
+    cols = return_period_columns(result)
+
+    expected_keys = {
+        f"{gm}_rp_{f'{t:.1f}'.replace('.', 'p')}"
+        for gm in ("frer", "mcer", "de")
+        for t in RP_PERIODS
+    }
+    assert set(cols) == expected_keys
+    assert all(math.isfinite(v) and v > 0 for v in cols.values())
+    # FRE_R targets a more frequent (shorter return period) motion than MCE_R,
+    # and DE is 2/3 of MCE_R, so at each period frer < de < mcer.
+    for t in RP_PERIODS:
+        s = f"{t:.1f}".replace(".", "p")
+        assert cols[f"frer_rp_{s}"] < cols[f"de_rp_{s}"] < cols[f"mcer_rp_{s}"]
+
+
+def test_return_period_columns_absent_for_asce722():
+    """ASCE 7-22 has no hazard-curve return period, so no columns are added."""
+    entry = load_entry(CACHE_DIR, SITE_ID, SITE_CLASS)
+    if entry is None:
+        pytest.skip(f"no frozen cache for site {SITE_ID} class {SITE_CLASS}")
+
+    result = calc_site(entry, "ASCE 7-22")
+
+    assert result.ls_spectrum is None
+    assert return_period_columns(result) == {}
 
 
 def test_calc_site_rejects_unknown_version():
