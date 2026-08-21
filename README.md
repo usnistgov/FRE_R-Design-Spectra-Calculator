@@ -34,6 +34,32 @@ ASCE 7-22 §21.4:
 - S<sub>DS</sub> = 0.9 × max Sa over 0.2 s ≤ T ≤ 5 s
 - S<sub>D1</sub> = max( Sa(1.0 s), 0.9 × max(T·Sa) over 1 s ≤ T ≤ 2 s )
 
+### Orientation: RotD50 vs RotD100
+
+Per the table above, **FRE<sub>R</sub> and DE ordinates are not on the same
+basis.** FRE<sub>R</sub> keeps the RotD50 orientation of the underlying hazard
+curves; the DE/MCE<sub>R</sub> ordinates are max direction (RotD100) — for
+ASCE 7-28 via the max-direction factors in `frer.spectrum`, and for ASCE 7-22
+because the USGS design-value service reports max-direction values.
+
+Reading one straight against the other understates FRE<sub>R</sub> by the
+max-direction factor (1.2 at short periods, rising to 1.3 at 10 s). Convert one
+to the other's orientation before comparing. Every spectral value the tool
+reports — CSV column, web-app metric, table header, plot label — carries its
+orientation for this reason.
+
+**Return periods are the exception, and deliberately so.** All six
+(FRE<sub>R</sub>, MCE<sub>R</sub>, DE at 0.2 s and 1.0 s) are read off the
+RotD50 hazard curve at the unscaled RTGM, so they already share one orientation
+and are directly comparable as printed — hence no suffix on those columns.
+
+A consequence worth knowing: because the return periods are consistent while the
+printed ordinates are not, a site can show S<sub>DSfr</sub> below S<sub>DS</sub>
+and *still* have a longer FRE<sub>R</sub> return period at 0.2 s. That is not a
+bug — it means FRE<sub>R</sub> genuinely exceeds DE at 0.2 s once both are put in
+the same orientation, and it happens wherever the 2-point S<sub>DS</sub> (driven
+by the spectral peak over 0.2–5 s) and the 0.2 s ordinate disagree.
+
 
 
 
@@ -97,6 +123,12 @@ Outputs are written under `results/<site_set>/<version>/`:
 - `frer_design_vals.csv` — one row per (site, class) with S<sub>DS</sub>,
   S<sub>D1</sub>, S<sub>DSfr</sub>, S<sub>D1fr</sub>; the `frtc_testbed` set
   also includes the full FREr multi-period spectrum (`frer_mps_*` columns).
+  Every spectral column carries the ground-motion orientation its value is
+  reported in, as a `_RotD50` / `_RotD100` suffix (`Sds_RotD100`,
+  `Sdsfr_RotD50`, `frer_mps_0p20_RotD50`, ...) — see
+  [Orientation](#orientation-rotd50-vs-rotd100) below. Return-period columns
+  (`frer_rp_0p2`, `mcer_rp_0p2`, `de_rp_0p2`, ...) are deliberately unsuffixed:
+  all six are read off the RotD50 hazard curve and share one orientation.
 - `Spectra_Plots - loglog/` — DE and FREr spectra plots (for `nehrp_34` and
   `frtc_testbed`).
 - `Scatter Plots/` — FREr-vs-DE scatter comparisons by site class and region
@@ -180,8 +212,12 @@ pytest
 
 `test_spectrum.py` covers the deterministic spectrum math. `test_benchmark.py`
 recomputes each site set from the frozen cache and asserts the **FREr values**
-(`Sdsfr`, `Sd1fr`, and the `frer_mps_*` spectrum) match the reference within a
-2% tolerance. It deliberately does **not** check `Sds`/`Sd1`: for ASCE 7-22
+(`Sdsfr_RotD50`, `Sd1fr_RotD50`, and the `frer_mps_*_RotD50` spectrum) match the
+reference within a 2% tolerance. The committed fixtures predate the orientation
+suffixes and hold the MATLAB reference values, so they are read through
+`rename_legacy_spectral_columns` rather than regenerated — regenerating them
+from Python would destroy what the benchmark compares against. It deliberately
+does **not** check `Sds`/`Sd1`: for ASCE 7-22
 those are returned by the USGS design-maps service, which is the source of truth
 for its own output, so drift there is not a calculator regression.
 

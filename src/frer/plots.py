@@ -9,7 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+from .params import DE_ORIENTATION, FR_ORIENTATION
+from .single import SD1_COLUMN, SD1FR_COLUMN, SDS_COLUMN, SDSFR_COLUMN
 from .spectrum import two_point_spectrum
+
+# Scatter-plot axis labels. The orientation is part of the label because the two
+# axes are on different bases: DE is max direction, FREr is RotD50, so a point
+# off the 1:1 line is not purely a difference in hazard.
+DE_AXIS = "S$_{{{}}}$ (g, " + DE_ORIENTATION + ")"
+FR_AXIS = "S$_{{{}}}$ (g, " + FR_ORIENTATION + ")"
 
 # MATLAB default color order
 CMAP = [
@@ -31,16 +39,21 @@ def draw_spectra(ax, result):
     fr_t, fr_sa = two_point_spectrum(result.sdsfr, result.sd1fr)
     ls_t, ls_sa = two_point_spectrum(result.sds, result.sd1)
 
-    ax.loglog(result.de_period, result.de_sa, "-k", label="DE: MPS")
-    ax.loglog(ls_t, ls_sa, "--k", label="DE: 2-point")
+    # The orientation rides along in the legend: the DE and FREr curves share an
+    # axes but not a basis (DE is max direction, FREr RotD50), so the vertical
+    # gap between them is not a like-for-like difference in ground motion.
+    de = f"DE [{DE_ORIENTATION}]"
+    fr = f"FRE$_R$ [{FR_ORIENTATION}]"
+    ax.loglog(result.de_period, result.de_sa, "-k", label=f"{de}: MPS")
+    ax.loglog(ls_t, ls_sa, "--k", label=f"{de}: 2-point")
     ax.loglog(
         result.fr_spectrum.period,
         result.fr_spectrum.sa,
         "-",
         color=CMAP[0],
-        label="FRE$_R$: MPS",
+        label=f"{fr}: MPS",
     )
-    ax.loglog(fr_t, fr_sa, "--", color=CMAP[0], label="FRE$_R$: 2-point")
+    ax.loglog(fr_t, fr_sa, "--", color=CMAP[0], label=f"{fr}: 2-point")
 
     ax.set_xlim(0.01, 5)
     ax.set_xlabel("Period (s)")
@@ -82,8 +95,8 @@ def plot_scatter_comparisons(plot_dir: Path, table):
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     pairs = [
-        ("Sds", "Sdsfr", "S$_{DS}$ (g)", "S$_{DSfr}$ (g)"),
-        ("Sd1", "Sd1fr", "S$_{D1}$ (g)", "S$_{D1fr}$ (g)"),
+        (SDS_COLUMN, SDSFR_COLUMN, DE_AXIS.format("DS"), FR_AXIS.format("DSfr")),
+        (SD1_COLUMN, SD1FR_COLUMN, DE_AXIS.format("D1"), FR_AXIS.format("D1fr")),
     ]
     regions = sorted(table["region"].unique())
 

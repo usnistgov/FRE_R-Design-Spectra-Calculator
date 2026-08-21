@@ -18,6 +18,8 @@ import streamlit as st
 from frer import __version__, usgs_api
 from frer.cache import cache_path, load_entry
 from frer.params import (
+    DE_ORIENTATION,
+    FR_ORIENTATION,
     NSHM_BOUNDS,
     RISK_CATEGORIES,
     SITE_CLASS_VS30,
@@ -27,6 +29,7 @@ from frer.params import (
 from frer.single import (
     RP_PERIODS,
     calc_site,
+    design_value_columns,
     frer_mps_columns,
     pull_site,
     return_period_columns,
@@ -60,6 +63,17 @@ SERIES_STYLE = {
     "FRE_R: 2-point": ("#0072BD", [6, 4]),
 }
 PERIOD_MAX = 5.0  # seconds; the range the 2-point spectra are defined over
+
+# Shown under the return-period table. The spectral values carry their
+# orientation in their own labels, so the only thing left to say is that the
+# return periods do not: every one is read off the RotD50 hazard curve at the
+# unscaled RTGM, whether or not the reported ordinate got the max-direction
+# factor applied.
+RETURN_PERIOD_NOTE = (
+    "Note, for comparing return periods with spectral values, return period "
+    "calculations are not affected by ground motion orientation "
+    f"(i.e., {FR_ORIENTATION} vs {DE_ORIENTATION})."
+)
 
 st.set_page_config(page_title="FREr Design Spectra Calculator", layout="wide")
 
@@ -290,11 +304,10 @@ def summary_frame(results) -> pd.DataFrame:
             "risk_category": result.risk_category,
             "version": result.version_id,
             "nshm": result.nshm,
-            "Sds": result.sds,
-            "Sd1": result.sd1,
-            "Sdsfr": result.sdsfr,
-            "Sd1fr": result.sd1fr,
         }
+        # Spectral values carry their orientation in the header; the
+        # return-period columns below are all RotD50 and stay unsuffixed.
+        row.update(design_value_columns(result))
         row.update(frer_mps_columns(result.fr_spectrum))
         row.update(return_period_columns(result))
         rows.append(row)
@@ -394,11 +407,13 @@ def spectra_frame(results) -> pd.DataFrame:
     table = None
     for result in results:
         frame = pd.DataFrame({"Period (s)": result.fr_spectrum.period})
-        frame[f"{result.version_id} FRE_R Sa (g)"] = result.fr_spectrum.sa
+        frame[f"{result.version_id} FRE_R Sa (g, {FR_ORIENTATION})"] = (
+            result.fr_spectrum.sa
+        )
         de = pd.DataFrame(
             {
                 "Period (s)": result.de_period,
-                f"{result.version_id} DE Sa (g)": result.de_sa,
+                f"{result.version_id} DE Sa (g, {DE_ORIENTATION})": result.de_sa,
             }
         )
         frame = frame.merge(de, on="Period (s)", how="outer")
@@ -450,16 +465,16 @@ def show_results(results):
     for result in results:
         st.subheader(f"{result.version_id} - NSHM {result.nshm}")
         cols = st.columns(4)
-        cols[0].metric("$S_{DS}$ (g)", f"{result.sds:.3f}")
-        cols[1].metric("$S_{D1}$ (g)", f"{result.sd1:.3f}")
+        cols[0].metric(f"$S_{{DS}}$ (g, {DE_ORIENTATION})", f"{result.sds:.3f}")
+        cols[1].metric(f"$S_{{D1}}$ (g, {DE_ORIENTATION})", f"{result.sd1:.3f}")
         cols[2].metric(
-            "$S_{DSfr}$ (g)",
+            f"$S_{{DSfr}}$ (g, {FR_ORIENTATION})",
             f"{result.sdsfr:.3f}",
             delta=_ratio_to_de(result.sdsfr, result.sds),
             delta_color="off",
         )
         cols[3].metric(
-            "$S_{D1fr}$ (g)",
+            f"$S_{{D1fr}}$ (g, {FR_ORIENTATION})",
             f"{result.sd1fr:.3f}",
             delta=_ratio_to_de(result.sd1fr, result.sd1),
             delta_color="off",
@@ -469,6 +484,7 @@ def show_results(results):
         st.markdown("**Return periods (years)**")
         if rp_table is not None:
             st.markdown(rp_table)
+            st.caption(RETURN_PERIOD_NOTE)
             if result.site_class == "E":
                 st.warning(
                     "Site class E (soft soil) sites often have steep hazard "

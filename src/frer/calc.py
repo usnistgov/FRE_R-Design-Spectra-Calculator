@@ -12,7 +12,12 @@ import pandas as pd
 
 from . import cache, plots
 from .params import VERSION_NSHM
-from .single import calc_site, frer_mps_columns, return_period_columns
+from .single import (
+    calc_site,
+    design_value_columns,
+    frer_mps_columns,
+    return_period_columns,
+)
 from .sites import load_sites, site_class_list
 
 
@@ -77,11 +82,10 @@ def calc_design_values(
                 "lon": site["lon"],
                 "region": site["region"],
                 "site_class": site_class,
-                "Sds": result.sds,
-                "Sd1": result.sd1,
-                "Sdsfr": result.sdsfr,
-                "Sd1fr": result.sd1fr,
             }
+            # 2-point design values, headers annotated with the ground-motion
+            # orientation each is reported in (DE is RotD100, FREr RotD50)
+            row.update(design_value_columns(result))
 
             # Add multi-period FREr spectrum values for the testbed cases
             if site_set == "frtc_testbed":

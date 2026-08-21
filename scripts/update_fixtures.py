@@ -24,6 +24,11 @@ import pandas as pd
 
 from frer.cache import covers_site_set
 from frer.calc import calc_design_values
+from frer.single import (
+    SD1FR_COLUMN,
+    SDSFR_COLUMN,
+    rename_legacy_spectral_columns,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
@@ -33,7 +38,7 @@ SITES_CSV = REPO_ROOT / "sites.csv"
 SITE_SETS = ["frtc_testbed", "nehrp_34", "usgs_160"]
 VERSIONS = ["ASCE 7-22", "ASCE 7-28"]
 
-FRER_COLS = ("Sdsfr", "Sd1fr")  # plus any frer_mps_* columns
+FRER_COLS = (SDSFR_COLUMN, SD1FR_COLUMN)  # plus any frer_mps_* columns
 
 
 def _frer_columns(df: pd.DataFrame) -> list[str]:
@@ -104,7 +109,13 @@ def main(argv=None):
             continue
         for version in versions:
             target = TESTS_DIR / site_set / version / "frer_design_vals.csv"
-            old = pd.read_csv(target) if target.exists() else None
+            # An existing fixture may predate the orientation suffixes on
+            # the spectral columns; normalise so the diff lines up.
+            old = (
+                rename_legacy_spectral_columns(pd.read_csv(target))
+                if target.exists()
+                else None
+            )
             # calc writes to out_dir/<site_set>/<version>/frer_design_vals.csv,
             # i.e. straight into the fixture location when out_dir == tests/.
             new = calc_design_values(

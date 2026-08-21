@@ -18,12 +18,15 @@ from frer.cache import load_entry
 from frer.params import NSHM_BOUNDS, VERSION_NSHM
 from frer.single import (
     RP_PERIODS,
+    SD1FR_COLUMN,
+    SDSFR_COLUMN,
     calc_site,
     check_location,
     check_vs30,
     frer_mps_columns,
     new_entry,
     pull_site,
+    rename_legacy_spectral_columns,
     return_period_columns,
 )
 
@@ -42,7 +45,9 @@ SITE_CLASS = "C"
 def reference_row(version: str) -> pd.Series:
     """The committed reference row for the site under test."""
     csv = TESTS_DIR / "frtc_testbed" / version / "frer_design_vals.csv"
-    table = pd.read_csv(csv)
+    # The fixture predates the orientation suffixes on the spectral columns, so
+    # its names are mapped onto the current ones on read (see test_benchmark).
+    table = rename_legacy_spectral_columns(pd.read_csv(csv))
     match = table[table["site_class"] == SITE_CLASS]
     assert len(match) == 1, f"expected exactly one class {SITE_CLASS} testbed row"
     return match.iloc[0]
@@ -58,8 +63,8 @@ def test_calc_site_matches_reference(version):
 
     result = calc_site(entry, version)
 
-    assert result.sdsfr == pytest.approx(expected["Sdsfr"], rel=RTOL)
-    assert result.sd1fr == pytest.approx(expected["Sd1fr"], rel=RTOL)
+    assert result.sdsfr == pytest.approx(expected[SDSFR_COLUMN], rel=RTOL)
+    assert result.sd1fr == pytest.approx(expected[SD1FR_COLUMN], rel=RTOL)
 
     # The full multi-period spectrum, via the same helper the CSV writer uses.
     for column, value in frer_mps_columns(result.fr_spectrum).items():

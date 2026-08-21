@@ -60,3 +60,18 @@ FR_PARAMS = RiskTargetParams(beta=0.6, poe=0.25, risk_target=0.1, t=50, maxdir=F
 # ASCE 7-28 Life Safety / DE ground motion parameters: 1.5% risk in 50 years,
 # 10% PoE, beta = 0.6, converted to max direction (RotD100).
 LS_PARAMS = RiskTargetParams(beta=0.6, poe=0.1, risk_target=0.015, t=50, maxdir=True)
+
+# Ground-motion orientation each spectrum is reported in. FREr keeps the RotD50
+# orientation of the underlying hazard curves (FR_PARAMS.maxdir is False), while
+# the DE/MCEr ordinates are max direction: for ASCE 7-28 via the MAXDIR factors
+# (LS_PARAMS.maxdir), and for ASCE 7-22 because the USGS design-value service
+# reports max-direction values. FREr and DE ordinates are therefore NOT directly
+# comparable -- one has to be converted to the other's orientation first (the
+# MAXDIR factors in frer.spectrum do that conversion). These names annotate the
+# CSV headers and UI labels so an exported value carries its own orientation.
+#
+# Return periods are deliberately not annotated: every one is read off the
+# RotD50 hazard curve at the unscaled RTGM, so they share a single orientation
+# and are directly comparable with each other.
+FR_ORIENTATION = "RotD50"
+DE_ORIENTATION = "RotD100"

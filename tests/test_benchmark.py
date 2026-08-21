@@ -5,10 +5,11 @@ Each ``tests/<site_set>/<version>/frer_design_vals.csv`` holds reference output.
 that feed the calculation, so the benchmark is reproducible offline; refreshing
 that cache is a separate, deliberate ``frer pull`` (never done by the tests).
 
-Scope: these tests exercise only the **FREr** outputs (``Sdsfr``, ``Sd1fr`` and
-the ``frer_mps_*`` spectrum) via ``frer.calc`` -- not the pull step, and not the
-DE values ``Sds``/``Sd1`` (for ASCE 7-22 those come straight from the USGS
-design-maps service, which is treated as the source of truth for itself).
+Scope: these tests exercise only the **FREr** outputs (``Sdsfr_RotD50``,
+``Sd1fr_RotD50`` and the ``frer_mps_*_RotD50`` spectrum) via ``frer.calc`` --
+not the pull step, and not the DE values ``Sds_RotD100``/``Sd1_RotD100`` (for
+ASCE 7-22 those come straight from the USGS design-maps service, which is
+treated as the source of truth for itself).
 
 For each (site set, version) whose cache is present, the FREr values are
 recomputed from the frozen cache and asserted to match the reference within
@@ -27,6 +28,11 @@ import pytest
 
 from frer.cache import covers_site_set
 from frer.calc import calc_design_values
+from frer.single import (
+    SD1FR_COLUMN,
+    SDSFR_COLUMN,
+    rename_legacy_spectral_columns,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
@@ -99,8 +105,22 @@ KNOWN_RP_EXCEPTIONS = {
 def _frer_columns(df: pd.DataFrame) -> list[str]:
     """FREr value columns present in a reference/result table."""
     return [
-        c for c in df.columns if c in ("Sdsfr", "Sd1fr") or c.startswith("frer_mps_")
+        c
+        for c in df.columns
+        if c in (SDSFR_COLUMN, SD1FR_COLUMN) or c.startswith("frer_mps_")
     ]
+
+
+def _read_reference(path) -> pd.DataFrame:
+    """Read a committed reference CSV, normalising its spectral column names.
+
+    The fixtures predate the orientation suffixes on the spectral columns (e.g.
+    ``Sdsfr`` is now ``Sdsfr_RotD50``) and are the MATLAB reference values, so
+    they are mapped onto the current names on read rather than regenerated --
+    regenerating them from Python would destroy what the benchmark compares
+    against. Return-period column names are unchanged and pass through as-is.
+    """
+    return rename_legacy_spectral_columns(pd.read_csv(path))
 
 
 def _recompute(site_set: str, version: str, out_dir) -> pd.DataFrame:
@@ -119,7 +139,7 @@ def test_frer_benchmark(site_set, version, tmp_path):
     if not covers_site_set(CACHE_DIR, SITES_CSV, site_set):
         pytest.skip(f"no frozen cache for {site_set}; run `frer pull` to add it")
 
-    expected = pd.read_csv(reference_csv)
+    expected = _read_reference(reference_csv)
     actual = _recompute(site_set, version, tmp_path)
     frer_cols = _frer_columns(expected)
 
@@ -168,7 +188,7 @@ def test_return_period_benchmark(tmp_path):
     if not covers_site_set(CACHE_DIR, SITES_CSV, site_set):
         pytest.skip(f"no frozen cache for {site_set}; run `frer pull` to add it")
 
-    expected = pd.read_csv(reference_csv)
+    expected = _read_reference(reference_csv)
     actual = _recompute(site_set, version, tmp_path)
 
     # Every ASCE 7-28 result row must carry the six return-period columns.

@@ -23,6 +23,8 @@ import numpy as np
 
 from . import usgs_api
 from .params import (
+    DE_ORIENTATION,
+    FR_ORIENTATION,
     FR_PARAMS,
     LS_PARAMS,
     NSHM_BOUNDS,
@@ -230,17 +232,73 @@ def calc_site(entry: dict, version_id: str) -> SiteResult:
     )
 
 
+# CSV column names for the 2-point design values. Each carries the ground-motion
+# orientation its value is reported in (see FR_ORIENTATION / DE_ORIENTATION), so
+# a row read back out of a CSV cannot be compared across orientations by
+# accident -- the FREr and DE columns are on different bases.
+SDS_COLUMN = f"Sds_{DE_ORIENTATION}"
+SD1_COLUMN = f"Sd1_{DE_ORIENTATION}"
+SDSFR_COLUMN = f"Sdsfr_{FR_ORIENTATION}"
+SD1FR_COLUMN = f"Sd1fr_{FR_ORIENTATION}"
+
+
+def design_value_columns(result: SiteResult) -> dict:
+    """The four 2-point design-value CSV columns for one site.
+
+    Shared by the batch CSV writer and the single-site export so the two cannot
+    drift apart in how they name or order the design values.
+    """
+    return {
+        SDS_COLUMN: result.sds,
+        SD1_COLUMN: result.sd1,
+        SDSFR_COLUMN: result.sdsfr,
+        SD1FR_COLUMN: result.sd1fr,
+    }
+
+
 def frer_mps_columns(spectrum: RTSpectrum) -> dict:
     """Return the ``frer_mps_*`` CSV columns for a FREr multi-period spectrum.
 
     Shared by the batch CSV writer and any single-site export so the two cannot
-    drift apart in how they name periods (0.2 s becomes ``frer_mps_0p20``).
+    drift apart in how they name periods (0.2 s becomes
+    ``frer_mps_0p20_RotD50``; the suffix is the orientation, as above).
     """
     columns = {}
     for t, sa in zip(spectrum.period, spectrum.sa, strict=True):
         t_str = f"{t:4.2f}".replace(".", "p")
-        columns[f"frer_mps_{t_str}"] = sa
+        columns[f"frer_mps_{t_str}_{FR_ORIENTATION}"] = sa
     return columns
+
+
+# Spectral-value column names used before the orientation suffixes were added.
+# The committed benchmark fixtures (and any CSV exported by an earlier version)
+# still use them, so readers map old -> new rather than rewriting those files.
+LEGACY_SPECTRAL_COLUMNS = {
+    "Sds": SDS_COLUMN,
+    "Sd1": SD1_COLUMN,
+    "Sdsfr": SDSFR_COLUMN,
+    "Sd1fr": SD1FR_COLUMN,
+}
+
+
+def rename_legacy_spectral_columns(table):
+    """Return ``table`` with pre-suffix spectral columns renamed to current ones.
+
+    Only the spectral columns move; the ``*_rp_*`` return-period columns are
+    unsuffixed by design and are left exactly as they are.
+    """
+    suffix = f"_{FR_ORIENTATION}"
+    mapping = {
+        old: new for old, new in LEGACY_SPECTRAL_COLUMNS.items() if old in table.columns
+    }
+    mapping.update(
+        {
+            c: f"{c}{suffix}"
+            for c in table.columns
+            if c.startswith("frer_mps_") and not c.endswith(suffix)
+        }
+    )
+    return table.rename(columns=mapping)
 
 
 # Periods (s) at which return periods are reported, per the MATLAB block
