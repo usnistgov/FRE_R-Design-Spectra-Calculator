@@ -10,4 +10,9 @@ pandas
 matplotlib
 requests
 streamlit
+# Imported directly by app.py (spectra charts) and map_view.py (the site map).
+# Streamlit happens to depend on both, but the app does not rely on that: it
+# uses each library's own API, so it declares them.
+altair
+pydeck
 .

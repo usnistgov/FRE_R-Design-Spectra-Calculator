@@ -146,15 +146,35 @@ multi-period ordinates, and a downloadable CSV. Every option is exposed: code
 version (ASCE 7-22, 7-28, or both side by side), site class, v<sub>S30</sub>,
 and risk category.
 
-The site is chosen one of two ways:
+The site is chosen one of two ways, picked in the sidebar:
 
 - **Custom coordinates** — any latitude/longitude in the conterminous U.S.,
   fetched live from USGS (see the timing note below).
-- **From a precomputed site list** — the `nehrp_34` benchmark sites, answered
-  instantly and offline from the frozen USGS responses committed under
-  `tests/usgs_cache/`. No network call is made, so these always work and return
-  in well under a second. (The larger `usgs_160` set can join this list once its
-  fixtures are committed.)
+- **Mapped values** — the 160 `usgs_160` benchmark sites, dropped as pins on a
+  pannable, zoomable map of the conterminous U.S. Click a pin and that site's
+  design values appear below the map; site class and code version are chosen in
+  the sidebar. The page opens with nothing selected, so there is nothing below
+  the map until a pin is clicked; the selected pin turns red and grows, and
+  clicking the map away from any pin clears the selection and empties the page
+  again. There is no Calculate button: the values are answered instantly and offline
+  from the frozen USGS responses committed under `tests/usgs_cache/`. Zoom in to
+  separate the sites that sit on top of one another at national zoom (the Los
+  Angeles basin, the Bay Area).
+
+  The map is the only way to pick a mapped site. deck.gl draws its markers into
+  a canvas, so they cannot be tabbed to or read by a screen reader; anyone who
+  needs a keyboard route should use **Custom coordinates**, which reaches the
+  same locations through ordinary latitude and longitude inputs.
+
+  The map is deck.gl, via the `pydeck` that ships with Streamlit, over a CARTO
+  tile basemap (`TILE_BASEMAP` in [map_view.py](map_view.py)). Those tiles are
+  the one part of the page that needs a network connection, and there is no
+  offline alternative: Streamlit draws a CARTO basemap under every
+  `st.pydeck_chart` whatever the deck asks for, reading `map_style=None` as
+  "pick one from the theme" rather than "draw none". Without a connection the
+  pins are left on an empty background. The design values behind them are
+  answered from the committed responses either way, and **Custom coordinates**
+  is the part that genuinely needs the network, for its live USGS pull.
 
 Streamlit is a Python web framework, so the app always runs on a Python host —
 either your own machine or a server. To run it locally, follow
@@ -173,7 +193,9 @@ status and unusable curves.
 
 ```
 ├── app.py                     # Streamlit single-site web app
+├── map_view.py                # zoomable deck.gl site map for the web app
 ├── sites.csv                  # site table with site-set membership
+├── conftest.py                # puts the repo root on sys.path for pytest
 ├── src/frer/
 │   ├── cli.py                 # `frer` command-line interface
 │   ├── usgs_api.py            # USGS design-maps + nshmp hazard clients
@@ -193,6 +215,7 @@ status and unusable curves.
 │   ├── test_benchmark.py      # benchmark FREr values vs the reference
 │   ├── test_single.py         # single-site API vs the reference + input guards
 │   ├── test_pull.py           # pull resilience (retry/backoff) tests
+│   ├── test_map_view.py       # site map layers + click payload contracts
 │   ├── conftest.py            # `network` marker / --run-network option
 │   ├── usgs_cache/            # frozen USGS responses (benchmark input)
 │   └── <site_set>/<version>/  # reference frer_design_vals.csv + plots

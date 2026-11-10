@@ -23,6 +23,10 @@ dev = [
     "pytest",
     "ruff",
     "codespell",
+    # Not a library dependency: the calculator itself never imports it. It is
+    # here so the tests can import map_view, the web app's deck.gl site map,
+    # which does. See requirements.txt for the app's own runtime dependencies.
+    "pydeck",
 ]
 
 [project.scripts]
