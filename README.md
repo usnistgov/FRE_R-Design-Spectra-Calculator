@@ -207,15 +207,20 @@ status and unusable curves.
 │   ├── calc.py                # design-value workflow / CSV output
 │   ├── plots.py               # spectra and scatter plots
 │   ├── sites.py               # sites.csv loading and site-set expansion
-│   └── params.py              # code versions and risk-target parameters
+│   ├── params.py              # code versions and risk-target parameters
+│   └── grid.py                # gridded design values over a region
 ├── scripts/
-│   └── update_fixtures.py     # regenerate the reference CSVs (deliberate)
+│   ├── update_fixtures.py     # regenerate the reference CSVs (deliberate)
+│   ├── build_grid.py          # build the gridded database (deliberate)
+│   └── validate_grid.py       # check the gridded database
 ├── tests/
 │   ├── test_spectrum.py       # unit tests for the spectrum math
 │   ├── test_benchmark.py      # benchmark FREr values vs the reference
 │   ├── test_single.py         # single-site API vs the reference + input guards
 │   ├── test_pull.py           # pull resilience (retry/backoff) tests
 │   ├── test_map_view.py       # site map layers + click payload contracts
+│   ├── test_grid.py           # grid geometry, resume, golden nodes
+│   ├── test_validate_grid.py  # the validator, and every way it should fail
 │   ├── conftest.py            # `network` marker / --run-network option
 │   ├── usgs_cache/            # frozen USGS responses (benchmark input)
 │   └── <site_set>/<version>/  # reference frer_design_vals.csv + plots
