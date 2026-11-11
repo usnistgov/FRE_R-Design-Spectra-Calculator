@@ -93,7 +93,7 @@ frer pull --site-set frtc_testbed
   "site sets" (`usgs_160`, `nehrp_34`, `frtc_testbed`) via the `*_id`
   columns. Omit `--site-set` to pull every site.
 - Sites with an explicit `site_class`/`vs30` use them; otherwise the four
-  default classes are pulled: BC (760 m/s), C (530), D (265), E (150).
+  default classes are pulled: BC (760 m/s), C (530), D (260), E (150).
 - Three calls are made per (site, class): ASCE 7-22 design values, NSHM 2018
   hazard curves, and NSHM 2023 hazard curves (select with `--editions`).
 - Results are cached one JSON file per (site, class) in `results/usgs_cache/`.

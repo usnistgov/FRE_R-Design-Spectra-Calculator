@@ -114,11 +114,21 @@ def _frer_columns(df: pd.DataFrame) -> list[str]:
 def _read_reference(path) -> pd.DataFrame:
     """Read a committed reference CSV, normalising its spectral column names.
 
-    The fixtures predate the orientation suffixes on the spectral columns (e.g.
-    ``Sdsfr`` is now ``Sdsfr_RotD50``) and are the MATLAB reference values, so
-    they are mapped onto the current names on read rather than regenerated --
-    regenerating them from Python would destroy what the benchmark compares
-    against. Return-period column names are unchanged and pass through as-is.
+    The fixtures predate the orientation suffixes on the spectral columns, so
+    ``Sdsfr`` is mapped onto ``Sdsfr_RotD50`` on read rather than the files
+    being rewritten. Return-period column names are unchanged and pass through.
+
+    Two different kinds of reference live behind this function, and they are
+    worth telling apart:
+
+    ``frer_design_vals.csv``
+        Regenerated from the frozen cache by scripts/update_fixtures.py, so it
+        reproduces to about 1e-14 and is a regression baseline: it catches a
+        change in the calculation, not an error in it.
+    ``frer_return_periods.csv``
+        Written by the original MATLAB tool and never regenerated. This is the
+        only remaining independent check, which is why it carries explicit
+        KNOWN_RP_EXCEPTIONS rather than matching outright.
     """
     return rename_legacy_spectral_columns(pd.read_csv(path))
 

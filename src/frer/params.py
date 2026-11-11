@@ -3,15 +3,30 @@
 from dataclasses import dataclass
 
 # Site classes pulled by default when a site does not specify one, and the
-# vs30 (m/s) value used for the hazard-curve call for each class.
-DEFAULT_SITE_CLASSES = {"BC": 760, "C": 530, "D": 265, "E": 150}
+# vs30 (m/s) sent to the hazard service for each.
+#
+# Only the hazard service takes a vs30 from us: it is a path segment of the
+# request URL (see frer.usgs_api.HAZARD_URL), and the service does not round
+# or snap it. The design-maps service, by contrast, takes the site class as a
+# string and resolves the vs30 itself -- so these numbers never reach it, and
+# changing them cannot affect an ASCE 7-22 Sds or Sd1.
+#
+# D is 260 to agree with what the design-maps service uses for class D, which
+# it reports back as response.metadata.vs30. It was 265 until 2026-11-11, a
+# value inherited from the original MATLAB tool; the consequence was that an
+# ASCE 7-22 class D result mixed two soil profiles, its DE values computed at
+# 260 and its FREr values at 265. See docs/vs30-class-d-migration.md for the
+# measured effect and what it cost.
+DEFAULT_SITE_CLASSES = {"BC": 760, "C": 530, "D": 260, "E": 150}
 
-# Every ASCE 7-22 site class and the vs30 (m/s) the USGS nshmp service maps it
-# to, as published by that service's usage endpoint. Used to seed the default
-# vs30 for an arbitrary single site; the batch pull keeps using
-# DEFAULT_SITE_CLASSES above, whose D is 265 rather than 260 (a value inherited
-# from the original MATLAB tool that the committed benchmark fixtures depend
-# on). Both are correct for their own purpose -- do not reconcile them.
+# Every ASCE 7-22 site class and the vs30 (m/s) the USGS design-maps service
+# maps it to, as published by that service's usage endpoint. Nothing is sent to
+# that service from here -- it is given the class as a string -- so this table
+# exists to seed the vs30 box for an arbitrary single site in the web app, and
+# to say on the record what the service means by each class.
+#
+# It still differs from DEFAULT_SITE_CLASSES above, which covers only the four
+# classes the batch pull fetches and carries no entry for A, B, CD, DE.
 SITE_CLASS_VS30 = {
     "A": 1500,
     "B": 1080,

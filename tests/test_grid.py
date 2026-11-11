@@ -315,8 +315,8 @@ def test_manifest_records_what_the_database_was_built_from(tmp_path):
     assert manifest["nshm"] == 2023
     assert manifest["rows"] == len(table)
     assert manifest["calculator_version"]
-    # The vs30 the fixtures depend on, not the design-maps value for class D.
-    assert manifest["site_classes"]["D"] == 265
+    # The vs30 actually sent to the hazard service for class D.
+    assert manifest["site_classes"]["D"] == 260
 
     path = write_manifest(manifest, tmp_path / "m.json")
     assert json.loads(path.read_text(encoding="utf-8")) == manifest

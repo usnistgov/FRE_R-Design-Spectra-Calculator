@@ -175,9 +175,9 @@ def test_a_manifest_describing_a_different_grid_is_caught(database, manifest):
 
 
 def test_a_wrong_vs30_is_caught(database, manifest):
-    """Class D at 260 rather than the 265 the fixtures depend on."""
-    wrong = {**manifest, "site_classes": {**manifest["site_classes"], "D": 260}}
-    with pytest.raises(validator.ValidationError, match="vs30 260"):
+    """Class D at the retired 265 rather than the 260 the code now sends."""
+    wrong = {**manifest, "site_classes": {**manifest["site_classes"], "D": 265}}
+    with pytest.raises(validator.ValidationError, match="vs30 265"):
         validator.check_manifest(wrong, database, SPEC)
 
 

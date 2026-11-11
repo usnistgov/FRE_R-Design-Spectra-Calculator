@@ -156,6 +156,7 @@ def call_hazard_api(
     data = resp.json()
     if data.get("status") != "success":
         # A 200 with a failure status is a server-side computation error, not a
-        # transient one; do not retry it (see Reno NV vs30=265, NSHM 2018).
+        # transient one; do not retry it (seen at Reno NV, NSHM 2018, back
+        # when class D was pulled at vs30=265).
         raise USGSApiError(f"hazard call status: {data.get('status')}")
     return data
