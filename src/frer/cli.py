@@ -9,6 +9,7 @@ frer calc : develop FREr/DE design values from the cache
 import argparse
 from pathlib import Path
 
+from . import usgs_api
 from .cache import DEFAULT_CACHE_DIR
 from .sites import SITE_SETS
 
@@ -51,9 +52,18 @@ def main(argv=None):
     p_pull.add_argument(
         "--pause",
         type=float,
-        default=1.0,
-        help="polite spacing in seconds between calls (default: 1); transient "
-        "errors are retried with backoff regardless",
+        default=usgs_api.PAUSE_RANGE[0],
+        help=f"minimum seconds between calls (default: "
+        f"{usgs_api.PAUSE_RANGE[0]:.0f}); the service throttles sustained use, "
+        "so spacing matters",
+    )
+    p_pull.add_argument(
+        "--pause-max",
+        type=float,
+        default=usgs_api.PAUSE_RANGE[1],
+        help=f"maximum seconds between calls (default: "
+        f"{usgs_api.PAUSE_RANGE[1]:.0f}); each wait is drawn uniformly between "
+        "--pause and this. Set both to 0 for no spacing",
     )
     p_pull.add_argument(
         "--timeout",
@@ -131,7 +141,7 @@ def main(argv=None):
             sites_csv=args.sites,
             cache_dir=args.cache_dir,
             site_set=args.site_set,
-            pause=args.pause,
+            pause=(args.pause, max(args.pause, args.pause_max)),
             limit=args.limit,
             editions=tuple(args.editions),
             timeout=args.timeout,

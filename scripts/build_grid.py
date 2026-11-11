@@ -42,6 +42,7 @@ from frer.grid import (
 from frer.params import DEFAULT_SITE_CLASSES
 from frer.single import rename_legacy_spectral_columns
 from frer.sites import load_sites
+from frer.usgs_api import PAUSE_RANGE
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SITES_CSV = REPO_ROOT / "sites.csv"
@@ -143,7 +144,7 @@ def run_build(spec, args) -> int:
         SITE_CLASSES,
         VERSION,
         work_dir=WORK_DIR,
-        pause=args.pause,
+        pause=(args.pause, max(args.pause, args.pause_max)),
         limit=args.limit,
         progress=print,
     )
@@ -187,7 +188,17 @@ def main(argv=None) -> int:
     )
     ap.add_argument("--step", type=float, help="override the grid step, in degrees")
     ap.add_argument(
-        "--pause", type=float, default=1.0, help="seconds between calls (default 1)"
+        "--pause",
+        type=float,
+        default=PAUSE_RANGE[0],
+        help=f"minimum seconds between calls (default {PAUSE_RANGE[0]:.0f})",
+    )
+    ap.add_argument(
+        "--pause-max",
+        type=float,
+        default=PAUSE_RANGE[1],
+        help=f"maximum seconds between calls (default {PAUSE_RANGE[1]:.0f}); "
+        "each wait is drawn uniformly in between. Set both to 0 for no spacing",
     )
     args = ap.parse_args(argv)
 

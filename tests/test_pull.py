@@ -131,13 +131,35 @@ def test_hazard_persistent_5xx_raises_after_retries(stub):
     assert stub.counts["hazard"] == 3  # 1 initial + 2 retries
 
 
-def test_hazard_app_error_is_not_retried(stub):
-    # A 200 whose body reports failure is a server-side calc error (e.g. Reno
-    # NV D, NSHM 2018): surface it immediately, do not hammer the endpoint.
+def test_hazard_app_error_is_retried_a_few_times_then_raises(stub):
+    # A 200 whose body reports failure is either a point that cannot be
+    # computed or the service declining to compute. It is tried a bounded
+    # number of times -- enough to outlast a throttle, few enough not to
+    # hammer a genuine error -- and then surfaced.
     stub.behaviors["hazard"] = (200, {"status": "error"})
     with pytest.raises(usgs_api.USGSApiError):
-        usgs_api.call_hazard_api(2018, 34.0, -118.0, 760, session=_fast_session(5))
-    assert stub.counts["hazard"] == 1
+        usgs_api.call_hazard_api(
+            2018, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
+        )
+    assert stub.counts["hazard"] == usgs_api.ERROR_RETRIES + 1
+
+
+def test_hazard_app_error_that_clears_is_recovered(stub):
+    """A throttle presents as a 200 error and clears; the call should survive it.
+
+    This is what a one-second pull ran into: the service answered 200 with a
+    failure body in a fraction of a second, the retry layer never saw it
+    because it only watches status codes, and a long run turned into a run of
+    false failures.
+    """
+    stub.behaviors["hazard"] = lambda n: (
+        HAZARD_OK if n > 1 else (200, {"status": "error"})
+    )
+    data = usgs_api.call_hazard_api(
+        2018, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
+    )
+    assert data["status"] == "success"
+    assert stub.counts["hazard"] == 2
 
 
 def test_design_success(stub):

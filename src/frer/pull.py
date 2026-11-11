@@ -6,7 +6,6 @@ Port of MATLAB ``pull_hazard_values.m``. Transient failures (rate limiting,
 un-cached so a re-run retries only what is missing.
 """
 
-import time
 from pathlib import Path
 
 from . import cache, usgs_api
@@ -19,7 +18,7 @@ def pull_sites(
     sites_csv: Path,
     cache_dir: Path,
     site_set: str | None = None,
-    pause: float = 1.0,
+    pause=usgs_api.PAUSE_RANGE,
     limit: int | None = None,
     editions: tuple = NSHM_YEARS,
     timeout: float = usgs_api.TIMEOUT,
@@ -130,5 +129,5 @@ def _rate_limited_call(stats, pause, label, call, store):
         stats["failed"] += 1
         print(f"  FAIL  {label}: {e}", flush=True)
     finally:
-        # Polite spacing between calls; burst backoff is handled per-request.
-        time.sleep(pause)
+        # Spacing between calls. Not only politeness -- see usgs_api.PAUSE_RANGE.
+        usgs_api.pace(pause)

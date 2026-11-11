@@ -10,6 +10,9 @@ body reports failure) are *not* retried. Raw JSON responses are returned so
 they can be cached to disk verbatim.
 """
 
+import random
+import time
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -32,6 +35,37 @@ USER_AGENT = f"frer-calculator/{__version__} (USGS design-values tool)"
 
 # Transient HTTP statuses worth retrying (rate limiting + gateway/5xx errors).
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
+# Seconds to wait between calls, sampled uniformly. This is not mere
+# politeness. The nshmp service throttles sustained use by answering HTTP 200
+# with ``status: "error"`` in a fraction of a second rather than computing, and
+# a 200 never reaches the retry layer above -- so spacing the calls is the only
+# thing standing between a long pull and a run of false failures. A pull at one
+# second per call was refused after roughly 320 calls; the original MATLAB tool
+# used 10-60 seconds and did not hit this.
+PAUSE_RANGE = (10.0, 60.0)
+
+# A 200 whose body reports failure can mean either of two things: this point
+# genuinely cannot be computed, or the service is declining to compute right
+# now. The first repeats deterministically and the second clears, so a couple
+# of widely spaced retries tell them apart without hammering anything.
+ERROR_RETRIES = 2
+ERROR_BACKOFF = 60.0
+
+
+def pace(pause=PAUSE_RANGE) -> float:
+    """Sleep between API calls; returns the delay used, in seconds.
+
+    ``pause`` is either a number of seconds or a (low, high) pair sampled
+    uniformly. Randomising avoids a lockstep request rhythm, which is both
+    easier for a rate limiter to spot and more likely to beat against one.
+    """
+    low, high = pause if isinstance(pause, (tuple, list)) else (pause, pause)
+    delay = random.uniform(low, high) if high > low else float(low)
+    if delay > 0:
+        time.sleep(delay)
+    return delay
+
 
 _DEFAULT_SESSION: requests.Session | None = None
 
@@ -139,6 +173,8 @@ def call_hazard_api(
     vs30: float,
     timeout: float = TIMEOUT,
     session: requests.Session | None = None,
+    error_retries: int = ERROR_RETRIES,
+    error_backoff: float = ERROR_BACKOFF,
 ) -> dict:
     """Call the USGS nshmp dynamic hazard web service; return raw response dict.
 
@@ -148,15 +184,20 @@ def call_hazard_api(
     ``response.hazardCurves``.
     """
     url = HAZARD_URL.format(edition=edition, lon=lon, lat=lat, vs30=int(vs30))
-    resp = _get(session, url, timeout)
-    if resp.status_code == 429:
-        raise USGSApiError("Too Many Requests")
-    if resp.status_code != 200:
-        raise USGSApiError(f"hazard call failed: HTTP {resp.status_code}")
-    data = resp.json()
-    if data.get("status") != "success":
-        # A 200 with a failure status is a server-side computation error, not a
-        # transient one; do not retry it (seen at Reno NV, NSHM 2018, back
-        # when class D was pulled at vs30=265).
-        raise USGSApiError(f"hazard call status: {data.get('status')}")
+    for attempt in range(error_retries + 1):
+        resp = _get(session, url, timeout)
+        if resp.status_code == 429:
+            raise USGSApiError("Too Many Requests")
+        if resp.status_code != 200:
+            raise USGSApiError(f"hazard call failed: HTTP {resp.status_code}")
+        data = resp.json()
+        if data.get("status") == "success":
+            break
+        # A 200 reporting failure is either a point that cannot be computed or
+        # the service declining to compute right now; the retry layer above
+        # never sees it, because it only watches status codes. Waiting tells
+        # the two apart (see ERROR_RETRIES).
+        if attempt == error_retries:
+            raise USGSApiError(f"hazard call status: {data.get('status')}")
+        time.sleep(error_backoff * (attempt + 1))
     return data

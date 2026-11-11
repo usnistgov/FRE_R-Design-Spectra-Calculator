@@ -16,13 +16,10 @@ a coarse grid and the hazard service interpolates between its nodes, so
 sampling far finer than the model fetches many points that carry no additional
 information. :func:`preflight` measures that directly before a long build
 commits to a spacing.
-
-See ``docs/phase-2-gridded-heatmap.md`` for the plan this implements.
 """
 
 import json
 import subprocess
-import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,7 +27,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import __version__, cache
+from . import __version__, cache, usgs_api
 from .params import DEFAULT_SITE_CLASSES, NSHM_BOUNDS, VERSION_NSHM
 from .single import (
     SD1_COLUMN,
@@ -346,7 +343,7 @@ def build_grid(
     site_classes,
     version_id: str,
     work_dir: Path,
-    pause: float = 1.0,
+    pause=usgs_api.PAUSE_RANGE,
     limit: int | None = None,
     progress=None,
     **pull_kwargs,
@@ -401,7 +398,7 @@ def build_grid(
             )
             if progress and (index % 25 == 0 or index == len(todo)):
                 progress(f"  {index:,}/{len(todo):,}  {label}")
-        time.sleep(pause)
+        usgs_api.pace(pause)
 
     if progress and failures:
         progress(f"{failures:,} node(s) failed and were left for a later run")
