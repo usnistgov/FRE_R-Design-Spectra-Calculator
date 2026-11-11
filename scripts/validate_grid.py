@@ -23,7 +23,8 @@ It checks five things:
 5. With --network, a sample of nodes re-pulled from USGS still matches.
 
 To convince yourself it can fail, change a value in the database and run it
-again; see docs/phase-2-gridded-heatmap.md, checkpoint 2.
+again, then restore it with git checkout. A validator nobody has watched
+fail is just a script that prints PASS.
 """
 
 import argparse

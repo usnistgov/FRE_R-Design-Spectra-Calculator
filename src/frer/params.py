@@ -15,8 +15,10 @@ from dataclasses import dataclass
 # it reports back as response.metadata.vs30. It was 265 until 2026-11-11, a
 # value inherited from the original MATLAB tool; the consequence was that an
 # ASCE 7-22 class D result mixed two soil profiles, its DE values computed at
-# 260 and its FREr values at 265. See docs/vs30-class-d-migration.md for the
-# measured effect and what it cost.
+# 260 and its FREr values at 265. Refreshing the committed class D curves at
+# 260 moved design values by 0.26% to 2.08% across 160 sites (median under
+# 1%), and left the MATLAB return-period comparison unchanged: no row moved
+# outside its band, so KNOWN_RP_EXCEPTIONS did not grow.
 DEFAULT_SITE_CLASSES = {"BC": 760, "C": 530, "D": 260, "E": 150}
 
 # Every ASCE 7-22 site class and the vs30 (m/s) the USGS design-maps service
