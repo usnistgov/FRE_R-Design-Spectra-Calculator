@@ -27,7 +27,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import __version__, cache, usgs_api
+from . import __version__, cache, landmask, usgs_api
 from .params import DEFAULT_SITE_CLASSES, NSHM_BOUNDS, VERSION_NSHM
 from .single import (
     SD1_COLUMN,
@@ -78,6 +78,17 @@ class GridSpec:
     lon_max: float
     step: float = 0.05
     name: str = "grid"
+    # The vendored coastline this grid is drawn against, by name. It does NOT
+    # decide which nodes are calculated -- every node in the rectangle is. It
+    # decides which cells a map shades and which rows feed a colour scale.
+    #
+    # It briefly did filter nodes, to skip open water. That stopped making
+    # sense once the extent was trimmed: almost all remaining water is within
+    # one cell of land, so skipping it saved four hours and cost the map its
+    # coastline, because a cell the shore passes through needs its seaward
+    # corners to interpolate from. Water rows are interpolation support; they
+    # are never presented as design values.
+    coastline: str | None = None
 
     def validate(self) -> None:
         """Raise :class:`ValueError` if the grid is unusable."""
@@ -143,19 +154,40 @@ class GridSpec:
             "lon_max": self.lon_max,
             "step": self.step,
             "nodes": len(self),
+            "coastline": self.coastline,
         }
 
 
-# The nine-county core of the San Francisco Bay Area. Its bounds are multiples
-# of 0.05 and it contains six usgs_160 sites whose committed cache and
-# reference values make them exact-node validation points.
+# The built-up core of the San Francisco Bay Area, at half the spacing the grid
+# first used. Its bounds are multiples of 0.025 and it contains six usgs_160
+# sites whose committed cache and reference values make them exact-node
+# validation points.
+#
+# The extent was trimmed in from the nine-county rectangle (37.10-38.40,
+# -122.80 to -121.70) because most of what it gained was ocean and empty hill
+# country, and the spacing was halved because 0.05 deg was measurably too
+# coarse: interpolating between nodes departed from the service by about 2% at
+# the median and 8.2% at worst, against the 2% the rest of the project treats as
+# agreement. Measured on the two worst cells, halving the step cut that by 2.8x.
+# Trimming paid for the refinement -- 4x the areal resolution for 1.45x the
+# calls.
+#
+# Note that every node of the old 0.05 grid is still a node here, so values
+# already pulled at the coarser spacing remain usable.
 BAY_AREA = GridSpec(
-    lat_min=37.10,
-    lat_max=38.40,
-    lon_min=-122.80,
-    lon_max=-121.70,
-    step=0.05,
+    lat_min=37.30,
+    lat_max=38.15,
+    lon_min=-122.55,
+    lon_max=-121.85,
+    step=0.025,
     name="bay_area",
+    # Every node in the rectangle is calculated, water included. 753 of the
+    # 1,015 are on land; the other 262 exist so that a map can be interpolated
+    # out to the shoreline instead of stopping up to 1.36 miles short of it,
+    # and are clipped away when it is drawn. Measured across four coastal
+    # nodes, hazard steps 6.3% across the shore against 9.3% inland, so there
+    # is no discontinuity to interpolate over.
+    coastline=landmask.DEFAULT_MASK,
 )
 
 
@@ -256,36 +288,123 @@ def sort_grid(table: pd.DataFrame) -> pd.DataFrame:
 # --- preflight -------------------------------------------------------------
 
 
+# The departure from linear interpolation that a gridded heatmap may carry.
+# Matched to the tolerance the benchmark and the validator already use to call
+# two results the same, because that is the standard the rest of the project
+# holds design values to.
+INTERPOLATION_TOLERANCE = 0.02
+
+PREFLIGHT_CANDIDATES = 5
+
+
+def _preflight_candidates(spec: GridSpec, limit: int = PREFLIGHT_CANDIDATES):
+    """``(lat, lon)`` starting points for the spacing check, best first.
+
+    Taken from the middle of the grid rather than a corner. The hazard service
+    refuses the occasional individual coordinate -- answering HTTP 200 with
+    ``status: error`` in a tenth of a second while all eight of that point's
+    neighbours compute normally -- and one such point should not decide whether
+    a day-long build starts. Walking outward in latitude retries a refused
+    triple on a different row.
+    """
+    available = {
+        (round(float(row.lat), COORD_DECIMALS), round(float(row.lon), COORD_DECIMALS))
+        for row in spec.nodes().itertuples()
+    }
+    if not available:
+        raise ValueError(f"{spec.name} has no nodes to sample")
+    lats = sorted({lat for lat, _ in available})
+    step = spec.step
+
+    # A candidate needs its eastern neighbour to be a node as well, which is
+    # false on the last column. Cells wholly on land are preferred: the map
+    # that has to be adequate is the land one, and water nodes are only there
+    # to interpolate from. A water cell is still usable if a row has no other.
+    pairs = []
+    middle = lats[len(lats) // 2]
+    for lat in sorted(lats, key=lambda value: abs(value - middle)):
+        lons = sorted(lon for other, lon in available if other == lat)
+        usable = [
+            lon for lon in lons if (lat, round(lon + step, COORD_DECIMALS)) in available
+        ]
+        if spec.coastline:
+            on_land = [
+                lon
+                for lon in usable
+                if landmask.is_land(lon, lat, spec.coastline)
+                and landmask.is_land(
+                    round(lon + step, COORD_DECIMALS), lat, spec.coastline
+                )
+            ]
+            usable = on_land or usable
+        if usable:
+            pairs.append((lat, usable[len(usable) // 2]))
+        if len(pairs) >= limit:
+            break
+    if not pairs:
+        raise ValueError(
+            f"{spec.name} has no node with an eastern neighbour to compare against"
+        )
+    return pairs
+
+
 def preflight(
     spec: GridSpec,
     site_class: str = "BC",
     version_id: str = "ASCE 7-28",
-    tolerance: float = 1e-9,
+    tolerance: float = INTERPOLATION_TOLERANCE,
+    candidates: int = PREFLIGHT_CANDIDATES,
     **pull_kwargs,
 ) -> dict:
-    """Check that ``spec.step`` is fine enough for the hazard model.
+    """Measure what sampling at ``spec.step`` costs the finished heatmap.
 
-    Calculates three points on one row: a node, the midpoint to its neighbour,
-    and that neighbour. If the midpoint's design values match one of the two
-    exactly, the service is snapping to a grid no finer than ``step`` and
-    sampling at ``step`` loses nothing. If it differs from both, the model
-    resolves finer and the grid is undersampling it.
+    Calculates three points on one row: a node, the midpoint to its eastern
+    neighbour, and that neighbour. The database stores the two endpoints and a
+    map interpolates between them, so the question that matters is how far that
+    interpolation lands from what the service itself returns in between.
 
-    Costs three hazard calls. Returns a dict recorded in the manifest, so a
-    finished database carries the evidence for its own resolution.
+    This used to test something else: whether the midpoint came back *identical*
+    to one of its neighbours, which would mean the service snapped to a grid no
+    finer than ``step``. It does not snap -- it returns continuously varying
+    values -- so that test could never pass at any step, and the advice it gave
+    on failure ("reduce --step") could not have helped. What it reported as a
+    failure was the genuine change in hazard across half a cell, which the
+    database captures at its endpoints and does not lose.
+
+    Costs three hazard calls per attempt. A triple containing a coordinate the
+    service refuses is retried on another row rather than ending the run;
+    ``checked`` is False only if every candidate was refused. Returns a dict
+    recorded in the manifest, so a finished database carries the evidence for
+    its own resolution.
     """
-    lat = float(spec.lats[len(spec.lats) // 2])
-    lon = float(spec.lons[0])
-    points = {
-        "node": lon,
-        "midpoint": round(lon + spec.step / 2, COORD_DECIMALS + 1),
-        "neighbour": round(lon + spec.step, COORD_DECIMALS),
-    }
-
-    values = {
-        label: node_values(lat, point_lon, site_class, version_id, **pull_kwargs)
-        for label, point_lon in points.items()
-    }
+    attempts: list[str] = []
+    for lat, lon in _preflight_candidates(spec, candidates):
+        points = {
+            "node": lon,
+            "midpoint": round(lon + spec.step / 2, COORD_DECIMALS + 1),
+            "neighbour": round(lon + spec.step, COORD_DECIMALS),
+        }
+        try:
+            values = {
+                label: node_values(
+                    lat, point_lon, site_class, version_id, **pull_kwargs
+                )
+                for label, point_lon in points.items()
+            }
+        except Exception as error:  # a coordinate the service will not compute
+            attempts.append(f"({lat:.4f}, {lon:.4f}) {type(error).__name__}: {error}")
+            continue
+        break
+    else:
+        return {
+            "checked": False,
+            "adequate": False,
+            "attempts": attempts,
+            "verdict": (
+                f"could not evaluate: the service refused all {len(attempts)} "
+                "candidate triple(s)"
+            ),
+        }
 
     def spread(a: dict, b: dict) -> float:
         return max(
@@ -293,12 +412,24 @@ def preflight(
             for column in VALUE_COLUMNS
         )
 
+    # How much hazard changes across half a cell. Real variation, captured by
+    # the two stored endpoints -- reported for context, never a pass or fail.
     to_node = spread(values["midpoint"], values["node"])
     to_neighbour = spread(values["midpoint"], values["neighbour"])
-    snapping = min(to_node, to_neighbour) <= tolerance
+
+    # What a map actually gets wrong between nodes: the midpoint against the
+    # straight line joining its neighbours. The trend across the cell is
+    # captured by the endpoints; this is the curvature the grid cannot carry.
+    straight = {
+        column: (values["node"][column] + values["neighbour"][column]) / 2
+        for column in VALUE_COLUMNS
+    }
+    error = spread(values["midpoint"], straight)
+    adequate = error <= tolerance
 
     return {
         "checked": True,
+        "attempts": attempts,
         "lat": lat,
         "lons": points,
         "site_class": site_class,
@@ -306,15 +437,20 @@ def preflight(
         "step": spec.step,
         "midpoint_vs_node": to_node,
         "midpoint_vs_neighbour": to_neighbour,
-        "adequate": bool(snapping),
+        "interpolation_error": error,
+        "tolerance": tolerance,
+        "adequate": bool(adequate),
         "verdict": (
-            f"midpoint matches a neighbouring node; step {spec.step} deg captures "
-            "the model's resolution"
-            if snapping
+            f"interpolating between {spec.step} deg nodes is within {error:.2%} "
+            f"of the service (tolerance {tolerance:.0%}); hazard itself moves "
+            f"{max(to_node, to_neighbour):.1%} across half a cell, which the "
+            "stored endpoints carry"
+            if adequate
             else (
-                f"midpoint differs from both neighbours (by {to_node:.3%} and "
-                f"{to_neighbour:.3%}); the model resolves finer than {spec.step} deg "
-                "and this grid would undersample it"
+                f"interpolating between {spec.step} deg nodes departs from the "
+                f"service by {error:.2%}, over the {tolerance:.0%} tolerance; "
+                "a map built from this grid would misread between nodes. "
+                "Reduce --step."
             )
         ),
     }
@@ -346,6 +482,7 @@ def build_grid(
     pause=usgs_api.PAUSE_RANGE,
     limit: int | None = None,
     progress=None,
+    failures_out: list | None = None,
     **pull_kwargs,
 ) -> pd.DataFrame:
     """Calculate every (node, site class), resuming from the ledger.
@@ -356,7 +493,9 @@ def build_grid(
 
     A node that fails after its retries is left out of the ledger rather than
     recorded as a gap, so a later run picks it up -- the same resume-on-failure
-    behaviour as :func:`frer.pull.pull_sites`.
+    behaviour as :func:`frer.pull.pull_sites`. Pass a list as ``failures_out``
+    to receive one dict per failure, which is how a caller tells a node the
+    service permanently refuses from one it has simply not reached yet.
     """
     spec.validate()
     work_dir = guard_not_in_tests(work_dir, "work_dir")
@@ -389,6 +528,15 @@ def build_grid(
             row = node_values(lat, lon, site_class, version_id, **pull_kwargs)
         except Exception as error:  # exhausted retries, bad payload, bounds
             failures += 1
+            if failures_out is not None:
+                failures_out.append(
+                    {
+                        "lat": round(lat, COORD_DECIMALS),
+                        "lon": round(lon, COORD_DECIMALS),
+                        "site_class": site_class,
+                        "error": f"{type(error).__name__}: {error}",
+                    }
+                )
             if progress:
                 progress(f"  FAIL  {label}: {error}")
         else:
@@ -457,6 +605,7 @@ def build_manifest(
     preflight_result: dict | None = None,
     repo_root: Path | None = None,
     built_at: str | None = None,
+    refused: list | None = None,
 ) -> dict:
     """Provenance for a finished grid.
 
@@ -478,6 +627,20 @@ def build_manifest(
         "built_at": built_at
         or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "preflight": preflight_result or {"checked": False},
+        # The coastline the finished map is drawn against. Pinned by digest, so
+        # a database built against one shoreline and drawn against another is
+        # detectable rather than quietly different.
+        "coastline": spec.coastline,
+        "coastline_sha256": (
+            landmask.digest(spec.coastline) if spec.coastline else None
+        ),
+        # (node, class) pairs the hazard service would not compute. Recorded so
+        # that a gap which is the service's rather than the build's is declared
+        # instead of inferred, and so validation can insist on exactly these.
+        "refused": sorted(
+            (dict(entry) for entry in (refused or [])),
+            key=lambda entry: (entry["site_class"], entry["lat"], entry["lon"]),
+        ),
     }
 
 

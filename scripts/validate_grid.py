@@ -35,6 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from frer import landmask
 from frer.grid import (
     BAY_AREA,
     COORD_DECIMALS,
@@ -119,8 +120,14 @@ def check_cache_untouched() -> None:
     ok(f"{CACHE_DIR.relative_to(REPO_ROOT)} matches the commit")
 
 
-def check_database(table: pd.DataFrame, spec) -> None:
-    """Shape, coverage and plausibility of the stored values."""
+def check_database(table: pd.DataFrame, spec, refused=()) -> None:
+    """Shape, coverage and plausibility of the stored values.
+
+    ``refused`` is the manifest's list of (node, class) pairs the hazard service
+    would not compute. Those are expected to be absent; anything else absent is
+    a gap, and a declared pair that is actually present inflates the row count
+    and fails here too.
+    """
     section("2. Database integrity")
 
     if list(table.columns) != GRID_COLUMNS:
@@ -128,10 +135,19 @@ def check_database(table: pd.DataFrame, spec) -> None:
             f"columns are {list(table.columns)}, expected {GRID_COLUMNS}"
         )
 
-    expected = len(spec) * len(SITE_CLASSES)
+    refused_keys = {
+        (
+            round(float(entry["lat"]), COORD_DECIMALS),
+            round(float(entry["lon"]), COORD_DECIMALS),
+            entry["site_class"],
+        )
+        for entry in refused
+    }
+    expected = len(spec) * len(SITE_CLASSES) - len(refused_keys)
     if len(table) != expected:
         raise ValidationError(f"{len(table):,} rows, expected {expected:,}")
-    ok(f"{len(table):,} rows = {len(spec):,} nodes x {len(SITE_CLASSES)} classes")
+    less = f", less {len(refused_keys)} declared refusal(s)" if refused_keys else ""
+    ok(f"{len(table):,} rows = {len(spec):,} nodes x {len(SITE_CLASSES)} classes{less}")
 
     duplicates = table.duplicated(subset=["lat", "lon", "site_class"]).sum()
     if duplicates:
@@ -149,7 +165,14 @@ def check_database(table: pd.DataFrame, spec) -> None:
 
     expected_nodes = node_set(spec.nodes())
     actual_nodes = node_set(table)
-    missing = expected_nodes - actual_nodes
+    # A node may vanish entirely only if every class was refused there. Refused
+    # for one class, it still has rows and still has to appear on the grid.
+    fully_refused = {
+        node
+        for node in expected_nodes
+        if all((*node, site_class) in refused_keys for site_class in SITE_CLASSES)
+    }
+    missing = expected_nodes - actual_nodes - fully_refused
     extra = actual_nodes - expected_nodes
     if missing or extra:
         detail = []
@@ -158,7 +181,12 @@ def check_database(table: pd.DataFrame, spec) -> None:
         if extra:
             detail.append(f"{len(extra)} row(s) off the grid, e.g. {sorted(extra)[0]}")
         raise ValidationError("; ".join(detail))
-    ok(f"{len(actual_nodes):,} nodes, each on the grid, none missing")
+    absent = (
+        f", {len(fully_refused)} absent by declaration"
+        if fully_refused
+        else ", none missing"
+    )
+    ok(f"{len(actual_nodes):,} nodes, each on the grid{absent}")
 
     if table[VALUE_COLUMNS].isna().any().any():
         raise ValidationError("NaN values present")
@@ -204,6 +232,37 @@ def check_manifest(manifest: dict, table: pd.DataFrame, spec) -> None:
             )
     ok(f"grid, version and row count agree ({grid['nodes']:,} nodes, {VERSION})")
 
+    # The coastline does not change which nodes exist, but it does decide which
+    # of them a map shades, so a database drawn against a different shoreline
+    # than it recorded is a real difference. Pinned by digest.
+    if manifest.get("coastline") != spec.coastline:
+        raise ValidationError(
+            f"built against coastline {manifest.get('coastline')!r}, "
+            f"code uses {spec.coastline!r}"
+        )
+    if spec.coastline:
+        current = landmask.digest(spec.coastline)
+        if manifest.get("coastline_sha256") != current:
+            raise ValidationError(
+                f"coastline {spec.coastline!r} has changed since the build "
+                f"({manifest.get('coastline_sha256')} then, {current} now); "
+                "a map drawn from this database would no longer clip the same way"
+            )
+        ok(f"coastline {spec.coastline!r} matches the build ({current[:12]}...)")
+
+        # Reported, not enforced: how much of the database is deliverable and
+        # how much is there to interpolate the map out to the shore.
+        unique = table[["lat", "lon"]].drop_duplicates()
+        on_land = sum(
+            1
+            for row in unique.itertuples()
+            if landmask.is_land(float(row.lon), float(row.lat), spec.coastline)
+        )
+        ok(
+            f"{on_land:,} of {len(unique):,} nodes on land; the other "
+            f"{len(unique) - on_land:,} are interpolation support, clipped when drawn"
+        )
+
     if manifest["calculator_version"] != __version__:
         raise ValidationError(
             f"built by calculator {manifest['calculator_version']}, "
@@ -218,6 +277,12 @@ def check_manifest(manifest: dict, table: pd.DataFrame, spec) -> None:
                 f"code uses {DEFAULT_SITE_CLASSES[site_class]}"
             )
     ok("site classes built at the vs30 values the fixtures depend on")
+
+    for entry in manifest.get("refused", []):
+        print(
+            f"  NOTE  {entry['lat']:.4f},{entry['lon']:.4f} "
+            f"[{entry['site_class']}] declared refused by the hazard service"
+        )
 
     preflight = manifest.get("preflight", {})
     if not preflight.get("checked"):
@@ -328,7 +393,7 @@ def main(argv=None) -> int:
         table = load_grid(csv_path)
         manifest = load_manifest(manifest_path)
 
-        check_database(table, spec)
+        check_database(table, spec, manifest.get("refused", []))
         check_manifest(manifest, table, spec)
         check_golden(table, spec)
         if args.network:

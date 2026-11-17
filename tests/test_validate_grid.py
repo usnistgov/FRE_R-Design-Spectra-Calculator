@@ -214,3 +214,100 @@ def test_cache_check_fails_when_git_reports_a_change(monkeypatch):
 def test_grid_columns_are_what_the_validator_expects():
     """Guards against the schema drifting away from the checks."""
     assert validator.GRID_COLUMNS == GRID_COLUMNS
+
+
+# --- declared refusals ------------------------------------------------------
+
+
+def test_a_declared_refusal_is_accepted(database, manifest):
+    """A pair the service refuses may be absent -- if the manifest says so."""
+    refused = [
+        {
+            "lat": float(database.iloc[0]["lat"]),
+            "lon": float(database.iloc[0]["lon"]),
+            "site_class": database.iloc[0]["site_class"],
+            "error": "USGSApiError: hazard call status: error",
+        }
+    ]
+    short = database.iloc[1:]
+    validator.check_database(short, SPEC, refused)
+    validator.check_manifest({**manifest, "rows": len(short)}, short, SPEC)
+
+
+def test_an_undeclared_gap_is_still_caught_when_others_are_declared(database):
+    """Declaring one refusal must not excuse a second, undeclared, gap."""
+    refused = [
+        {
+            "lat": float(database.iloc[0]["lat"]),
+            "lon": float(database.iloc[0]["lon"]),
+            "site_class": database.iloc[0]["site_class"],
+            "error": "USGSApiError: hazard call status: error",
+        }
+    ]
+    with pytest.raises(validator.ValidationError, match="rows, expected"):
+        validator.check_database(database.iloc[2:], SPEC, refused)
+
+
+def test_a_declared_pair_that_is_present_is_caught(database):
+    """A manifest cannot shrink the expected count while the row is still there."""
+    refused = [
+        {
+            "lat": float(database.iloc[0]["lat"]),
+            "lon": float(database.iloc[0]["lon"]),
+            "site_class": database.iloc[0]["site_class"],
+            "error": "USGSApiError: hazard call status: error",
+        }
+    ]
+    with pytest.raises(validator.ValidationError, match="rows, expected"):
+        validator.check_database(database, SPEC, refused)
+
+
+def test_a_node_absent_for_one_class_only_must_still_appear(database):
+    """Refused for one class, a node keeps its other rows and stays on the grid."""
+    first = database.iloc[0]
+    refused = [
+        {
+            "lat": float(first["lat"]),
+            "lon": float(first["lon"]),
+            "site_class": site_class,
+            "error": "USGSApiError: hazard call status: error",
+        }
+        for site_class in SITE_CLASSES
+    ]
+    # All four classes declared refused, so the node may vanish entirely.
+    at_node = (database["lat"] == first["lat"]) & (database["lon"] == first["lon"])
+    validator.check_database(database[~at_node], SPEC, refused)
+
+    # But declaring only one class does not license removing all four rows.
+    with pytest.raises(validator.ValidationError, match="rows, expected"):
+        validator.check_database(database[~at_node], SPEC, refused[:1])
+
+
+# --- the coastline's provenance ---------------------------------------------
+
+
+def test_a_manifest_built_against_a_different_coastline_is_caught(database, manifest):
+    """A map clipped to one shoreline, from a database built against another."""
+    wrong = {**manifest, "coastline": "some_other_coastline"}
+    with pytest.raises(validator.ValidationError, match="code uses"):
+        validator.check_manifest(wrong, database, SPEC)
+
+
+def test_a_changed_coastline_file_is_caught(database, manifest):
+    """Re-vendoring moves where the map is clipped; that must not pass silently."""
+    spec = GridSpec(
+        lat_min=SPEC.lat_min,
+        lat_max=SPEC.lat_max,
+        lon_min=SPEC.lon_min,
+        lon_max=SPEC.lon_max,
+        step=SPEC.step,
+        name=SPEC.name,
+        coastline="bay_area_land",
+    )
+    built = {
+        **manifest,
+        "coastline": "bay_area_land",
+        "coastline_sha256": "0" * 64,
+    }
+    with pytest.raises(validator.ValidationError, match="no longer clip"):
+        validator.check_manifest(built, database, spec)
