@@ -1,0 +1,55 @@
+{
+  "built_at": "2026-11-17T17:24:23Z",
+  "calculator_version": "1.0.0",
+  "coastline": "bay_area_land",
+  "coastline_sha256": "387e9b11d4b57a17d1d8903a9e668d8654cc77b80e35e7c3be1da544840d0fe1",
+  "columns": [
+    "lat",
+    "lon",
+    "site_class",
+    "Sds_RotD100",
+    "Sd1_RotD100",
+    "Sdsfr_RotD50",
+    "Sd1fr_RotD50"
+  ],
+  "git_sha": "db539287788bd80a2221aede63ca7fe32d6c0c8d",
+  "grid": {
+    "coastline": "bay_area_land",
+    "lat_max": 38.15,
+    "lat_min": 37.3,
+    "lon_max": -121.85,
+    "lon_min": -122.55,
+    "name": "bay_area",
+    "nodes": 1015,
+    "step": 0.025
+  },
+  "nshm": 2023,
+  "preflight": {
+    "adequate": true,
+    "attempts": [],
+    "checked": true,
+    "interpolation_error": 0.008925983011042934,
+    "lat": 37.725,
+    "lons": {
+      "midpoint": -122.1125,
+      "neighbour": -122.1,
+      "node": -122.125
+    },
+    "midpoint_vs_neighbour": 0.02452966787062513,
+    "midpoint_vs_node": 0.03071219605624371,
+    "site_class": "BC",
+    "step": 0.025,
+    "tolerance": 0.02,
+    "verdict": "interpolating between 0.025 deg nodes is within 0.89% of the service (tolerance 2%); hazard itself moves 3.1% across half a cell, which the stored endpoints carry",
+    "version": "ASCE 7-28"
+  },
+  "refused": [],
+  "rows": 4060,
+  "site_classes": {
+    "BC": 760,
+    "C": 530,
+    "D": 260,
+    "E": 150
+  },
+  "version": "ASCE 7-28"
+}
