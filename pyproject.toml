@@ -35,6 +35,12 @@ frer = "frer.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# The vendored coastline the gridded database is cut to. Without this a real
+# (non-editable) install gets the code but not the mask, and every grid node
+# lookup fails.
+[tool.setuptools.package-data]
+frer = ["data/*.geojson"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
