@@ -303,7 +303,25 @@ def mapped_inputs(sites):
     return site_class, VERSIONS if choice == "Both" else [choice]
 
 
-@st.cache_data(show_spinner=False)
+def data_stamp() -> tuple:
+    """What everything derived from the gridded database is cached against.
+
+    The files' identity -- name, size, modification time -- rather than their
+    contents, which would mean reading them to decide whether to read them.
+
+    It is a cache key and nothing else. Without it, ``st.cache_data`` keys on
+    the arguments alone, so a server that is still running when the database
+    changes underneath it keeps serving what it derived from the old one, for
+    as long as the process lives. That is not hypothetical: a corrected
+    coastline digest was pushed to a deployment and had no effect, because
+    the manifest it corrected was being served out of cache.
+    """
+    return tuple(
+        (path.name, stat.st_size, stat.st_mtime_ns)
+        for path, stat in ((p, p.stat()) for p in (GRID_CSV, GRID_JSON))
+    )
+
+
 def grid_database():
     """The committed gridded database, or ``(None, None)`` if it is absent.
 
@@ -311,13 +329,21 @@ def grid_database():
     it, so a checkout without it should lose the overlay and nothing else.
     """
     if not (GRID_CSV.exists() and GRID_JSON.exists()):
-        return None, None, None
+        return None, None
+    return _grid_database(data_stamp())
+
+
+@st.cache_data(show_spinner=False)
+def _grid_database(stamp):
     return load_grid(GRID_CSV), load_manifest(GRID_JSON)
 
 
 @st.cache_data(show_spinner=False)
-def render_overlay(site_class: str, field_key: str):
+def render_overlay(stamp, site_class: str, field_key: str):
     """One rendered field, cached across reruns.
+
+    ``stamp`` is :func:`data_stamp`: it takes no part in the render, only in
+    the cache key, so new data cannot be served from an old cache.
 
     The first render builds the coastline clip, which is the expensive part
     and is then shared by every field and class; after it, switching is
@@ -332,7 +358,7 @@ def render_overlay(site_class: str, field_key: str):
 
 
 @st.cache_data(show_spinner=False)
-def contour_paths(site_class: str, field_key: str):
+def contour_paths(stamp, site_class: str, field_key: str):
     """The band boundaries as lines, cached across reruns.
 
     Traced from the same database the image is drawn from, so the lines fall
@@ -345,7 +371,7 @@ def contour_paths(site_class: str, field_key: str):
 
 
 @st.cache_data(show_spinner=False)
-def sample_surface(site_class: str, field_key: str):
+def sample_surface(stamp, site_class: str, field_key: str):
     """The hover readout's sampled surface, cached across reruns.
 
     Derived from the committed database, not stored beside it: it is a pure
@@ -392,9 +418,10 @@ def heatmap_inputs(site_class):
         format_func=lambda key: heatmap.FIELDS[key].label,
     )
     try:
-        overlay = render_overlay(site_class, field_key)
-        lines = contour_paths(site_class, field_key)
-        samples = sample_surface(site_class, field_key)
+        stamp = data_stamp()
+        overlay = render_overlay(stamp, site_class, field_key)
+        lines = contour_paths(stamp, site_class, field_key)
+        samples = sample_surface(stamp, site_class, field_key)
     except heatmap.HeatmapError as error:
         st.sidebar.error(str(error))
         return None, None, None
