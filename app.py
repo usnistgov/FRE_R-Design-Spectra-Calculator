@@ -16,8 +16,9 @@ import pandas as pd
 import streamlit as st
 
 import map_view
-from frer import __version__, usgs_api
+from frer import __version__, heatmap, usgs_api
 from frer.cache import cache_path, load_entry
+from frer.grid import BAY_AREA, load_grid, load_manifest
 from frer.params import (
     DE_ORIENTATION,
     FR_ORIENTATION,
@@ -61,10 +62,33 @@ PRECOMPUTED_RISK_CATEGORY = "II"
 # so the unused sites.csv columns would otherwise be sent on every rerun.
 MAP_COLUMNS = ["id", "name", "lat", "lon", "region"]
 
+# The gridded heatmap overlay. One database, ASCE 7-28 only: its DE values come
+# free with the hazard call that NSHM 2023 answers, where ASCE 7-22 would need a
+# second call per node and so a second build of roughly twice the length. The
+# overlay therefore states its code version and does NOT follow the sidebar's
+# version selector, which governs the single-site results underneath it.
+GRID_DIR = REPO_ROOT / "data" / "grid"
+GRID_CSV = GRID_DIR / "bay_area_asce7-28.csv.gz"
+GRID_JSON = GRID_DIR / "bay_area_asce7-28.json"
+GRID_VERSION = "ASCE 7-28"
+
+# On by default. It was off while the overlay was an opaque wash that got in
+# the way of finding a site; it is now a faint banded fill with contour lines
+# that the basemap reads straight through, and the question it answers -- how
+# values vary around here -- is worth having on arrival rather than behind a
+# toggle.
+HEATMAP_DEFAULT_ON = True
+
 # Session-state key for the mapped site. Plain state rather than a widget key:
 # the map is the only thing that selects a site, so nothing else writes it and
 # there is no widget whose creation order has to be worked around.
 SITE_STATE_KEY = "mapped_site_id"
+
+# Whether the selection Streamlit is holding belongs to the readout grid
+# rather than to a pin. Remembered only so that switching the overlay off,
+# which deletes that selection, is not mistaken for a click on bare map; see
+# map_view.resolve_selection.
+READOUT_PICK_KEY = "mapped_pick_on_readout"
 
 # The two site sources, by their label in the sidebar radio.
 CUSTOM_SOURCE = "Custom coordinates"
@@ -279,41 +303,174 @@ def mapped_inputs(sites):
     return site_class, VERSIONS if choice == "Both" else [choice]
 
 
-def render_site_map(sites, selected_id) -> None:
+@st.cache_data(show_spinner=False)
+def grid_database():
+    """The committed gridded database, or ``(None, None)`` if it is absent.
+
+    Absent rather than fatal: the calculator's single-site flow does not need
+    it, so a checkout without it should lose the overlay and nothing else.
+    """
+    if not (GRID_CSV.exists() and GRID_JSON.exists()):
+        return None, None, None
+    return load_grid(GRID_CSV), load_manifest(GRID_JSON)
+
+
+@st.cache_data(show_spinner=False)
+def render_overlay(site_class: str, field_key: str):
+    """One rendered field, cached across reruns.
+
+    The first render builds the coastline clip, which is the expensive part
+    and is then shared by every field and class; after it, switching is
+    nearly free. Caching here as well means a rerun from clicking a pin does
+    not redo even that.
+    """
+    table, manifest = grid_database()
+    if table is None:
+        return None
+    heatmap.check_coastline(manifest, BAY_AREA.coastline)
+    return heatmap.render(table, site_class, field_key)
+
+
+@st.cache_data(show_spinner=False)
+def contour_paths(site_class: str, field_key: str):
+    """The band boundaries as lines, cached across reruns.
+
+    Traced from the same database the image is drawn from, so the lines fall
+    exactly where the fill changes colour.
+    """
+    table, _ = grid_database()
+    if table is None:
+        return None
+    return heatmap.contours(table, site_class, field_key)
+
+
+@st.cache_data(show_spinner=False)
+def sample_surface(site_class: str, field_key: str):
+    """The hover readout's sampled surface, cached across reruns.
+
+    Derived from the committed database, not stored beside it: it is a pure
+    function of a file that is already in the repository, and recomputing it
+    costs about fifty milliseconds. A second file holding the same numbers
+    would need its own manifest and its own validation, and could go stale
+    against the database the day one was rebuilt without the other.
+    """
+    table, _ = grid_database()
+    if table is None:
+        return None
+    return heatmap.sample_surface(table, site_class, field_key)
+
+
+def heatmap_inputs(site_class):
+    """Sidebar controls for the overlay; ``(overlay, contours, samples)``.
+
+    ``(None, ...)`` means draw no overlay, which is what the toggle being off
+    gets you. On is the arrival state: the fill is faint enough and the
+    contour lines sparse enough that it informs the map rather than covering
+    it, which is why there is no opacity control to reach for.
+    """
+    st.sidebar.header("Heatmap")
+    table, _ = grid_database()
+    if table is None:
+        st.sidebar.caption(
+            "No gridded database in `data/grid`. Build one with "
+            "`python scripts/build_grid.py`."
+        )
+        return None, None, None
+
+    if not st.sidebar.toggle(
+        "Show design values across the region", value=HEATMAP_DEFAULT_ON
+    ):
+        st.sidebar.caption(
+            f"{GRID_VERSION}, San Francisco Bay Area only. The site values "
+            "below the map are unaffected."
+        )
+        return None, None, None
+
+    field_key = st.sidebar.radio(
+        "Field",
+        list(heatmap.FIELDS),
+        format_func=lambda key: heatmap.FIELDS[key].label,
+    )
+    try:
+        overlay = render_overlay(site_class, field_key)
+        lines = contour_paths(site_class, field_key)
+        samples = sample_surface(site_class, field_key)
+    except heatmap.HeatmapError as error:
+        st.sidebar.error(str(error))
+        return None, None, None
+    st.sidebar.caption(
+        "Hover anywhere on the shaded area to read an interpolated value."
+    )
+    return overlay, lines, samples
+
+
+def render_site_map(
+    sites, selected_id, overlay=None, contours=None, samples=None
+) -> None:
     """Draw the zoomable site map and act on a click.
 
     A click records the site and reruns, which moves the highlight ring onto it
     and redevelops the values shown underneath.
 
-    Clicking the map away from any pin clears deck.gl's selection, which comes
-    back here as None and deselects the site, emptying the page below the map.
-    So the stored site simply tracks whatever the map reports.
-
     The chart keeps one stable key so panning and zooming survive that rerun.
     Re-keying it per site is the obvious way to drop a selection deck.gl is
     still holding, but it would also throw the viewer back out to the whole
     country every time they picked a site, which is the opposite of the point.
-    Comparing against the current site is what stops the rerun repeating:
+    Comparing against the current state is what stops the rerun repeating:
     deck.gl keeps reporting the same selection until it changes.
     """
     event = st.pydeck_chart(
-        map_view.site_map(sites[MAP_COLUMNS], selected_id),
+        map_view.site_map(
+            sites[MAP_COLUMNS],
+            selected_id,
+            overlay=(overlay.data_uri, overlay.bounds) if overlay else None,
+            readout=(
+                (samples.points, samples.half_lat, samples.half_lon, samples.detail)
+                if samples is not None
+                else None
+            ),
+            contours=contours,
+        ),
         height=map_view.MAP_HEIGHT,
         width="stretch",
         key="site_map",
         on_select="rerun",
         selection_mode="single-object",
     )
+    if overlay is not None:
+        # Under the map rather than beside it: the bar has to be read against
+        # the colours it explains, and the sidebar is the wrong side of the
+        # page from most of them.
+        st.markdown(heatmap.legend_html(overlay, GRID_VERSION), unsafe_allow_html=True)
     st.caption(
         f"{len(sites)} mapped sites. Click a marker for its design spectra; "
         "scroll to zoom, drag to pan. Every value comes from the USGS responses "
         "committed with the calculator, so no network call is made."
+        + (
+            " The heatmap covers the San Francisco Bay Area only — zoom in to read it."
+            if overlay is not None
+            else ""
+        )
     )
 
-    clicked = map_view.clicked_site_id(event.selection)
-    if clicked != selected_id:
-        st.session_state[SITE_STATE_KEY] = clicked
+    if _apply_map_selection(event.selection, selected_id, samples is not None):
         st.rerun()
+
+
+def _apply_map_selection(selection, selected_id, has_readout) -> bool:
+    """Store what the map reports; True when the page has to rerun.
+
+    The rule itself is :func:`map_view.resolve_selection`, which is a pure
+    function so it can be tested; this is the part that touches session
+    state.
+    """
+    on_readout = bool(st.session_state.get(READOUT_PICK_KEY))
+    wanted_site, wanted_readout = map_view.resolve_selection(
+        selection, selected_id, on_readout, has_readout
+    )
+    st.session_state[SITE_STATE_KEY] = wanted_site
+    st.session_state[READOUT_PICK_KEY] = wanted_readout
+    return wanted_site != selected_id
 
 
 # --- Results ---------------------------------------------------------------
@@ -617,7 +774,8 @@ source, sites = site_source()
 if source == MAPPED_SOURCE:
     site_id = current_site_id(sites)
     site_class, versions = mapped_inputs(sites)
-    render_site_map(sites, site_id)
+    overlay, contour_lines, samples = heatmap_inputs(site_class)
+    render_site_map(sites, site_id, overlay, contour_lines, samples)
     # Nothing under the map until a pin is clicked; the map's own caption is
     # what says so, rather than a placeholder that would only be in the way
     # once there are values to read.
