@@ -39,13 +39,22 @@ def _load(name: str):
             "`python scripts/vendor_landmask.py --download`."
         )
     raw = path.read_bytes()
+    # Newlines are normalised before hashing, so the digest describes the
+    # coastline rather than the checkout it came from. git treats .geojson as
+    # text: with core.autocrlf on Windows the working copy gains a CR on every
+    # line while the committed blob keeps LF, so the same file hashes two ways
+    # on two machines. That is not a difference in the coastline, but it is
+    # enough to fail the check this digest exists for -- a database built on
+    # Windows refused to draw on a Linux deployment over a single trailing
+    # byte. .gitattributes pins the working copy to LF as well; this is the
+    # half that holds even if someone checks the repository out without it.
     feature = json.loads(raw.decode("utf-8"))
     clip = feature["properties"]["clip"]
     polygons = tuple(
         tuple(tuple((float(x), float(y)) for x, y in ring) for ring in poly)
         for poly in feature["geometry"]["coordinates"]
     )
-    return polygons, clip, hashlib.sha256(raw).hexdigest()
+    return polygons, clip, hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def digest(name: str = DEFAULT_MASK) -> str:

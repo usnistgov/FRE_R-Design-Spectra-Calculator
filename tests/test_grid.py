@@ -16,6 +16,7 @@ Nothing here touches the network.
 """
 
 import json
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -758,6 +759,36 @@ def test_the_manifest_pins_the_coastline_by_digest():
     assert manifest["coastline"] == "bay_area_land"
     assert manifest["coastline_sha256"] == landmask.digest("bay_area_land")
     assert len(manifest["coastline_sha256"]) == 64
+
+
+def test_the_digest_does_not_depend_on_how_the_file_was_checked_out():
+    """The same coastline must hash the same on every platform.
+
+    git treats .geojson as text, so with core.autocrlf a Windows working
+    copy carries CRLF where the committed blob carries LF. Hashing the raw
+    bytes made the digest a property of the checkout: a database built on
+    Windows recorded one value and a Linux deployment computed another,
+    over a single trailing byte, and refused to draw the map.
+    """
+    source = landmask.DATA_DIR / "bay_area_land.geojson"
+    unix = source.read_bytes().replace(b"\r\n", b"\n")
+    windows = unix.replace(b"\n", b"\r\n")
+    assert unix != windows, "fixture is not exercising the difference"
+
+    digests = set()
+    for variant in (unix, windows):
+        with tempfile.TemporaryDirectory() as folder:
+            copy = Path(folder) / "checkout.geojson"
+            copy.write_bytes(variant)
+            original, landmask.DATA_DIR = landmask.DATA_DIR, Path(folder)
+            try:
+                landmask._load.cache_clear()
+                digests.add(landmask.digest("checkout"))
+            finally:
+                landmask.DATA_DIR = original
+                landmask._load.cache_clear()
+    assert len(digests) == 1, f"line endings changed the digest: {digests}"
+    assert digests == {landmask.digest("bay_area_land")}
 
 
 def test_a_grid_with_no_coastline_records_none():

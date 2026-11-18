@@ -1,0 +1,15 @@
+# Keep the vendored coastline byte-identical on every platform.
+#
+# It is hashed, and its digest is recorded in each gridded database's manifest
+# so a map cannot be drawn against a shoreline the data was not built against.
+# Left to git's text handling, core.autocrlf gives a Windows checkout CRLF and
+# a Linux one LF, the file hashes two ways, and the check fires on a
+# difference that is not a difference. frer.landmask normalises newlines
+# before hashing too; this keeps the working copies themselves in agreement.
+*.geojson text eol=lf
+
+# The committed design-value database and its manifest, for the same reason:
+# they are compared byte-for-byte against rebuilds.
+*.csv text eol=lf
+*.json text eol=lf
+*.gz binary

@@ -19,11 +19,12 @@ is clipped to the Bay Area with a margin and only that is committed.
 """
 
 import argparse
-import hashlib
 import json
 import sys
 import urllib.request
 from pathlib import Path
+
+from frer import landmask
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT = REPO_ROOT / "src" / "frer" / "data" / "bay_area_land.geojson"
@@ -148,14 +149,21 @@ def main(argv=None) -> int:
 
     feature = build(source)
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    # newline="" so the trailing newline stays LF on Windows too. In text mode
+    # it becomes CRLF, the file then hashes differently from the blob git
+    # stores, and the digest recorded in a manifest stops reproducing on any
+    # other platform -- which is exactly what happened once.
     OUT.write_text(
         json.dumps(feature, separators=(",", ":"), sort_keys=True) + "\n",
         encoding="utf-8",
+        newline="",
     )
     if args.download:
         source.unlink()
 
-    digest = hashlib.sha256(OUT.read_bytes()).hexdigest()
+    # Through landmask so the printed value is the one a manifest will carry,
+    # rather than a second definition that can drift from it.
+    digest = landmask.digest(OUT.stem)
     polygons = feature["geometry"]["coordinates"]
     vertices = sum(len(ring) for poly in polygons for ring in poly)
     print(f"wrote {OUT.relative_to(REPO_ROOT)}")

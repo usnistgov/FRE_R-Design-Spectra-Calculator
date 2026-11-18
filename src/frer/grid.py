@@ -647,7 +647,15 @@ def build_manifest(
 def write_manifest(manifest: dict, path: Path) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8")
+    # newline="" so a rebuild on Windows writes the same bytes as one on
+    # Linux. In text mode Python translates to CRLF, and a manifest that is
+    # compared against a rebuild should not differ by the platform it was
+    # built on.
+    path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="",
+    )
     return path
 
 

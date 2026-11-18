@@ -2,7 +2,7 @@
   "built_at": "2026-11-17T17:24:23Z",
   "calculator_version": "1.0.0",
   "coastline": "bay_area_land",
-  "coastline_sha256": "387e9b11d4b57a17d1d8903a9e668d8654cc77b80e35e7c3be1da544840d0fe1",
+  "coastline_sha256": "288bea6c6bacf07748e67691959057e92dc840009bd75707c3ca09b4c932aa4b",
   "columns": [
     "lat",
     "lon",
