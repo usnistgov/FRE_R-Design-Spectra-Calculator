@@ -60,7 +60,7 @@ PRECOMPUTED_RISK_CATEGORY = "II"
 # Columns the site map needs (see map_view.site_map). The frame is trimmed to
 # these before it goes into the chart: deck.gl serialises the data into the page,
 # so the unused sites.csv columns would otherwise be sent on every rerun.
-MAP_COLUMNS = ["id", "name", "lat", "lon", "region"]
+MAP_COLUMNS = ["id", "name", "lat", "lon"]
 
 # The gridded heatmap overlay. One database, ASCE 7-28 only: its DE values come
 # free with the hazard call that NSHM 2023 answers, where ASCE 7-22 would need a
@@ -785,7 +785,7 @@ def render_mapped_results(sites, site_id, site_class, versions):
     st.subheader(str(row["name"]))
     st.caption(
         f"Latitude {row['lat']:.4f}, longitude {row['lon']:.4f} · "
-        f"{row['region']} · risk category {PRECOMPUTED_RISK_CATEGORY}"
+        f"risk category {PRECOMPUTED_RISK_CATEGORY}"
     )
     try:
         show_results(site_results(site_id, site_class, versions))

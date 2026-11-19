@@ -32,7 +32,6 @@ SITES = pd.DataFrame(
         "name": ["Atmore AL", "Chicago IL", "Seattle WA"],
         "lat": [31.00, 41.85, 47.60],
         "lon": [-87.50, -87.65, -122.30],
-        "region": ["CEUS", "CEUS", "PNW"],
     }
 )
 
@@ -109,8 +108,8 @@ def test_literal_rejects_a_value_it_cannot_carry():
 
 def test_site_map_rejects_a_frame_missing_columns():
     """A frame without the columns the layer reads fails here, not in the page."""
-    with pytest.raises(ValueError, match="region"):
-        map_view.site_map(SITES.drop(columns=["region"]))
+    with pytest.raises(ValueError, match="name"):
+        map_view.site_map(SITES.drop(columns=["name"]))
 
 
 @pytest.mark.parametrize(

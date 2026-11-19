@@ -62,7 +62,7 @@ SITE_ID_FIELD = "id"
 # the pins and the readout cells have to answer to the same placeholders --
 # Streamlit leaves a `{key}` standing in the rendered tooltip when the picked
 # object has no such field, which is how a mismatch shows up. Hence two
-# generic names rather than `name`/`region`: a title line and a detail line,
+# generic names rather than `name`/`value`: a title line and a detail line,
 # filled differently by each layer.
 #
 # All four are single characters because they repeat once per cell, and there
@@ -199,9 +199,14 @@ def _site_layer(sites, selected_id) -> pdk.Layer:
                 SELECTED_PIN_SIZE if is_chosen else PIN_SIZE for is_chosen in chosen
             ],
             # The deck's one tooltip template reads these two; see the field
-            # constants. A pin's title is its name and its detail its region.
+            # constants. A pin's title is its name and its detail the
+            # coordinates it was computed at -- the same pair the caption
+            # under the map repeats once the pin is clicked.
             TOOLTIP_TITLE_FIELD: sites["name"],
-            TOOLTIP_DETAIL_FIELD: sites["region"],
+            TOOLTIP_DETAIL_FIELD: [
+                f"{lat:.4f}, {lon:.4f}"
+                for lat, lon in zip(sites["lat"], sites["lon"], strict=True)
+            ],
         }
     )
     # Row order is deliberately left alone. Drawing the selected pin last would
@@ -395,8 +400,8 @@ def site_map(
 ) -> pdk.Deck:
     """Build the zoomable site map.
 
-    ``sites`` needs ``id``, ``name``, ``lat``, ``lon``, and ``region`` columns;
-    any others ride along and are handed back with a click, which is how the
+    ``sites`` needs ``id``, ``name``, ``lat``, and ``lon`` columns; any others
+    ride along and are handed back with a click, which is how the
     app gets a site's name without a second lookup. ``selected_id`` is the site
     to colour as selected, or None when nothing has been picked yet.
 
@@ -417,7 +422,7 @@ def site_map(
     to a city, a simplified coastline cutting across open water and a grey
     wash over land the tiles had already drawn properly.
     """
-    required = {SITE_ID_FIELD, "name", "lat", "lon", "region"}
+    required = {SITE_ID_FIELD, "name", "lat", "lon"}
     missing = required - set(sites.columns)
     if missing:
         raise ValueError(f"sites is missing column(s) {sorted(missing)}")

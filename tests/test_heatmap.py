@@ -362,7 +362,6 @@ SITES = pd.DataFrame(
         "name": ["Oakland CA", "San Jose CA"],
         "lat": [37.80, 37.34],
         "lon": [-122.27, -121.89],
-        "region": ["CA", "CA"],
     }
 )
 
@@ -679,11 +678,11 @@ def test_every_pickable_layer_fills_the_tooltip_fields(table):
     assert pickable == 2
 
 
-def test_a_pins_tooltip_is_still_its_name_and_region():
+def test_a_pins_tooltip_is_still_its_name_and_coordinates():
     layer = map_view._site_layer(SITES, None)
     row = json.loads(layer.to_json())["data"][0]
     assert row[map_view.TOOLTIP_TITLE_FIELD] == "Oakland CA"
-    assert row[map_view.TOOLTIP_DETAIL_FIELD] == "CA"
+    assert row[map_view.TOOLTIP_DETAIL_FIELD] == "37.8000, -122.2700"
 
 
 # --- reading a click back ----------------------------------------------------
