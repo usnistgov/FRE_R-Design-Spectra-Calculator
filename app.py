@@ -65,19 +65,12 @@ MAP_COLUMNS = ["id", "name", "lat", "lon", "region"]
 # The gridded heatmap overlay. One database, ASCE 7-28 only: its DE values come
 # free with the hazard call that NSHM 2023 answers, where ASCE 7-22 would need a
 # second call per node and so a second build of roughly twice the length. The
-# overlay therefore states its code version and does NOT follow the sidebar's
-# version selector, which governs the single-site results underneath it.
+# overlay therefore states its code version and does NOT follow the code
+# version of the single-site results underneath it.
 GRID_DIR = REPO_ROOT / "data" / "grid"
 GRID_CSV = GRID_DIR / "bay_area_asce7-28.csv.gz"
 GRID_JSON = GRID_DIR / "bay_area_asce7-28.json"
 GRID_VERSION = "ASCE 7-28"
-
-# On by default. It was off while the overlay was an opaque wash that got in
-# the way of finding a site; it is now a faint banded fill with contour lines
-# that the basemap reads straight through, and the question it answers -- how
-# values vary around here -- is worth having on arrival rather than behind a
-# toggle.
-HEATMAP_DEFAULT_ON = True
 
 # Session-state key for the mapped site. Plain state rather than a widget key:
 # the map is the only thing that selects a site, so nothing else writes it and
@@ -290,17 +283,19 @@ def shared_site_classes(site_ids: tuple[int, ...]) -> list[str]:
 
 
 def mapped_inputs(sites):
-    """Sidebar analysis inputs for the mapped flow.
+    """Sidebar analysis inputs for the mapped flow; ``(site_class, versions)``.
 
     The site itself is not among them: it is picked on the map, and these are
     asked for up front so they are already set when it is.
+
+    Both code versions, always. Every mapped site is served from the frozen
+    USGS responses, so showing the second edition costs nothing but the
+    column -- and comparing the two is the question the mapped side is for,
+    which made the selector a step between arriving and the answer.
     """
     classes = shared_site_classes(tuple(int(i) for i in sites["id"]))
     site_class = st.sidebar.selectbox("Site class", classes)
-
-    st.sidebar.header("Analysis")
-    choice = st.sidebar.radio("Code version", [*VERSIONS, "Both"], index=0)
-    return site_class, VERSIONS if choice == "Both" else [choice]
+    return site_class, list(VERSIONS)
 
 
 def data_stamp() -> tuple:
@@ -389,10 +384,19 @@ def sample_surface(stamp, site_class: str, field_key: str):
 def heatmap_inputs(site_class):
     """Sidebar controls for the overlay; ``(overlay, contours, samples)``.
 
-    ``(None, ...)`` means draw no overlay, which is what the toggle being off
-    gets you. On is the arrival state: the fill is faint enough and the
-    contour lines sparse enough that it informs the map rather than covering
-    it, which is why there is no opacity control to reach for.
+    The overlay is always drawn: the fill is faint enough and the contour
+    lines sparse enough that it informs the map rather than covering it, so
+    there is neither a switch to turn it off nor an opacity control to reach
+    for. Only the field is chosen here.
+
+    It was behind a toggle, off, while the overlay was an opaque wash that got
+    in the way of finding a site. What replaced the wash reads as part of the
+    map, and the question it answers -- how values vary around here -- is the
+    one the map is opened for, so the switch went too.
+
+    ``(None, ...)`` is left for the cases that are not a choice -- no gridded
+    database in the checkout, or a field that fails to render -- and means
+    draw no overlay.
     """
     st.sidebar.header("Heatmap")
     table, _ = grid_database()
@@ -400,15 +404,6 @@ def heatmap_inputs(site_class):
         st.sidebar.caption(
             "No gridded database in `data/grid`. Build one with "
             "`python scripts/build_grid.py`."
-        )
-        return None, None, None
-
-    if not st.sidebar.toggle(
-        "Show design values across the region", value=HEATMAP_DEFAULT_ON
-    ):
-        st.sidebar.caption(
-            f"{GRID_VERSION}, San Francisco Bay Area only. The site values "
-            "below the map are unaffected."
         )
         return None, None, None
 
@@ -701,6 +696,15 @@ def return_period_markdown(result) -> str | None:
 
 def show_results(results):
     """Render metrics, the spectra plot, the period table, and a CSV download."""
+    # Where to send someone whose ASCE 7-22 panel has no return periods. When
+    # both versions are on the page -- always, on the mapped side -- the ones
+    # they want are already below, so pointing at the version selector would
+    # be pointing at a control that is not there.
+    rp_pointer = (
+        "The ASCE 7-28 return periods are below."
+        if len(results) > 1
+        else "Select ASCE 7-28 for return periods."
+    )
     for result in results:
         st.subheader(f"{result.version_id} - NSHM {result.nshm}")
         cols = st.columns(4)
@@ -735,7 +739,7 @@ def show_results(results):
             st.caption(
                 "Not defined for ASCE 7-22: its design values mix risk-targeted "
                 "and deterministic caps that have no single hazard-curve return "
-                "period. Select ASCE 7-28 for return periods."
+                f"period. {rp_pointer}"
             )
 
     st.subheader("Design spectra")
