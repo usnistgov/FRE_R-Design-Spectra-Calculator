@@ -25,9 +25,7 @@ def function(tree, name):
     raise AssertionError(f"app.py has no function {name!r}")
 
 
-@pytest.mark.parametrize(
-    "name", ["grid_database", "heatmap_inputs", "site_source", "data_stamp"]
-)
+@pytest.mark.parametrize("name", ["grid_database", "heatmap_layers", "data_stamp"])
 def test_every_branch_returns_the_same_shape(tree, name):
     """A function whose callers unpack it must return one arity everywhere.
 

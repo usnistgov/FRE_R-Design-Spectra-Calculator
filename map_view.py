@@ -94,8 +94,13 @@ MAP_HEIGHT = 620  # px; the map is the page, so it takes most of the viewport
 # unselected pin is the calculator's series blue from app.SERIES_STYLE, so a
 # site on the map and its FRE_R spectrum below read as the same thing; the
 # selected one goes red, which is what marks it.
+#
+# A site added by coordinate is green, so the handful someone adds stand out
+# among the precomputed pins without changing what selection means: whichever
+# pin is selected is the red one, added or not.
 PIN_COLOR = (0, 114, 189)
 SELECTED_PIN_COLOR = (214, 39, 40)
+CUSTOM_PIN_COLOR = (44, 160, 44)
 
 # Pin heights in pixels. The selected pin is drawn larger as well as redder:
 # among 160 pins at national zoom, a colour change alone is easy to lose.
@@ -109,6 +114,7 @@ SIZE_FIELD = "size"
 
 DEFAULT_PIN = "default"
 SELECTED_PIN = "selected"
+CUSTOM_PIN = "custom"
 
 # One classic teardrop, as a path: a 24x32 pin with a hole through the middle,
 # so the basemap shows through it.
@@ -123,8 +129,9 @@ def _hex(rgb) -> str:
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
 
-# Both states are drawn into one 48x32 atlas -- the blue pin at x=0, the red one
-# at x=24 -- and the layer picks between them per row. The obvious alternative
+# All three are drawn into one 72x32 atlas -- the blue pin at x=0, the red one
+# at x=24, the green one at x=48 -- and the layer picks between them per row.
+# The obvious alternative
 # is one white pin used as a mask with a per-row colour accessor, which is how
 # this started; it cannot be used here. While any selection is live, Streamlit
 # rewrites the colour accessor of every layer that declares one and fades
@@ -132,11 +139,13 @@ def _hex(rgb) -> str:
 # the icon means this layer declares no colour accessor, so there is nothing for
 # it to rewrite and the pins keep their colour whatever is selected.
 PIN_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="32" '
-    'viewBox="0 0 48 32">'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="32" '
+    'viewBox="0 0 72 32">'
     f'<path fill="{_hex(PIN_COLOR)}" fill-rule="evenodd" d="{PIN_PATH}"/>'
     f'<path fill="{_hex(SELECTED_PIN_COLOR)}" fill-rule="evenodd" '
     f'transform="translate(24 0)" d="{PIN_PATH}"/>'
+    f'<path fill="{_hex(CUSTOM_PIN_COLOR)}" fill-rule="evenodd" '
+    f'transform="translate(48 0)" d="{PIN_PATH}"/>'
     "</svg>"
 )
 
@@ -161,7 +170,11 @@ def _pin_icon(x: int) -> dict:
     }
 
 
-PIN_ICON_MAPPING = {DEFAULT_PIN: _pin_icon(0), SELECTED_PIN: _pin_icon(24)}
+PIN_ICON_MAPPING = {
+    DEFAULT_PIN: _pin_icon(0),
+    SELECTED_PIN: _pin_icon(24),
+    CUSTOM_PIN: _pin_icon(48),
+}
 
 
 def _literal(value: str) -> str:
@@ -182,22 +195,38 @@ def _literal(value: str) -> str:
     return f"'{value}'"
 
 
-def _site_layer(sites, selected_id) -> pdk.Layer:
+def _pin_state(site_id, selected_id, custom_ids) -> tuple[str, int]:
+    """Which icon a site draws and how big, as ``(icon, size)``.
+
+    Selection wins over origin: the site being read is the red one whether it
+    came with the calculator or was added by coordinate, so there is one thing
+    to look for rather than two reds to tell apart.
+    """
+    if site_id == selected_id:
+        return SELECTED_PIN, SELECTED_PIN_SIZE
+    if site_id in custom_ids:
+        return CUSTOM_PIN, PIN_SIZE
+    return DEFAULT_PIN, PIN_SIZE
+
+
+def _site_layer(sites, selected_id, custom_ids=()) -> pdk.Layer:
     """One clickable pin per site, the selected one drawn in the other colour.
+
+    ``custom_ids`` are the sites added by coordinate, drawn green; everything
+    else is a precomputed site.
 
     Which icon and what size ride along as ordinary columns rather than as a
     second layer drawn over the top: one layer means one thing to pick, so a
     click cannot land on a highlight instead of the site under it.
     """
-    chosen = [site_id == selected_id for site_id in sites[SITE_ID_FIELD]]
+    custom_ids = set(custom_ids)
+    states = [
+        _pin_state(site_id, selected_id, custom_ids) for site_id in sites[SITE_ID_FIELD]
+    ]
     frame = sites.assign(
         **{
-            ICON_FIELD: [
-                SELECTED_PIN if is_chosen else DEFAULT_PIN for is_chosen in chosen
-            ],
-            SIZE_FIELD: [
-                SELECTED_PIN_SIZE if is_chosen else PIN_SIZE for is_chosen in chosen
-            ],
+            ICON_FIELD: [icon for icon, _ in states],
+            SIZE_FIELD: [size for _, size in states],
             # The deck's one tooltip template reads these two; see the field
             # constants. A pin's title is its name and its detail the
             # coordinates it was computed at -- the same pair the caption
@@ -396,7 +425,12 @@ def contour_layer(paths) -> pdk.Layer:
 
 
 def site_map(
-    sites, selected_id=None, overlay=None, readout=None, contours=None
+    sites,
+    selected_id=None,
+    overlay=None,
+    readout=None,
+    contours=None,
+    custom_ids=(),
 ) -> pdk.Deck:
     """Build the zoomable site map.
 
@@ -404,6 +438,9 @@ def site_map(
     ride along and are handed back with a click, which is how the
     app gets a site's name without a second lookup. ``selected_id`` is the site
     to colour as selected, or None when nothing has been picked yet.
+
+    ``custom_ids`` are the ids of sites added by coordinate rather than shipped
+    with the calculator; their pins are green.
 
     ``overlay`` is an optional ``(image_uri, bounds)`` pair -- a rendered
     field from :mod:`frer.heatmap` -- drawn underneath the pins. None leaves
@@ -438,7 +475,7 @@ def site_map(
         layers.append(contour_layer(contours))
     if readout is not None:
         layers.append(readout_layer(*readout))
-    layers.append(_site_layer(sites, selected_id))
+    layers.append(_site_layer(sites, selected_id, custom_ids))
 
     return pdk.Deck(
         layers=layers,

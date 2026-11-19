@@ -141,30 +141,38 @@ outputs and cache.
 
 For a single site, the calculator runs as a [Streamlit](https://streamlit.io)
 app. [app.py](app.py) performs both stages (pull, then calc) for one location
-and displays the FREr and DE design values, an interactive spectra chart, the
-multi-period ordinates, and a downloadable CSV. Every option is exposed: code
-version (ASCE 7-22, 7-28, or both side by side), site class, v<sub>S30</sub>,
-and risk category.
+and displays a section per code version — FREr and DE design values, return
+periods, an interactive spectra chart and the multi-period ordinates — with
+ASCE 7-28 first and ASCE 7-22 below it, then one CSV of both to download.
 
-The site is chosen one of two ways, picked in the sidebar:
+The page is a map, and every site is a pin on it:
 
-- **Custom coordinates** — any latitude/longitude in the conterminous U.S.,
-  fetched live from USGS (see the timing note below).
-- **Mapped values** — the 160 `usgs_160` benchmark sites, dropped as pins on a
-  pannable, zoomable map of the conterminous U.S. Click a pin and that site's
-  design values appear below the map; site class and code version are chosen in
-  the sidebar. The page opens with nothing selected, so there is nothing below
-  the map until a pin is clicked; the selected pin turns red and grows, and
-  clicking the map away from any pin clears the selection and empties the page
-  again. There is no Calculate button: the values are answered instantly and offline
+- **The 160 `usgs_160` benchmark sites** open as blue pins on a pannable,
+  zoomable map of the conterminous U.S. Click a pin and that site's design
+  values appear below the map; the site class they are read at is chosen in the
+  sidebar. The page opens with nothing selected, so there is nothing below the
+  map until a pin is clicked; the selected pin turns red and grows, and clicking
+  the map away from any pin clears the selection and empties the page again.
+  There is no Calculate button: the values are answered instantly and offline
   from the frozen USGS responses committed under `tests/usgs_cache/`. Zoom in to
   separate the sites that sit on top of one another at national zoom (the Los
   Angeles basin, the Bay Area).
+- **Sites you add by coordinate**, from the sidebar's **Add a site by
+  coordinate** button, which opens a dialog over the map: any
+  latitude/longitude in the conterminous U.S., with its own site class,
+  v<sub>S30</sub> and risk category, fetched live from USGS (about 15 seconds
+  per code version). The dialog closes when the pull finishes; the site joins
+  the map as a green pin and its values open underneath it. Add as many as you
+  like — the sidebar lists them — and they last for the browser session, held
+  only in that session's memory and gone on reload. The site class under
+  **Heatmap** governs the mapped pins and the overlay, not an added site: an
+  added site keeps what it was pulled with, which its caption states.
 
-  The map is the only way to pick a mapped site. deck.gl draws its markers into
-  a canvas, so they cannot be tabbed to or read by a screen reader; anyone who
-  needs a keyboard route should use **Custom coordinates**, which reaches the
-  same locations through ordinary latitude and longitude inputs.
+  The map is the only way to pick a site. deck.gl draws its markers into a
+  canvas, so they cannot be tabbed to or read by a screen reader; anyone who
+  needs a keyboard route can reach any location through the add-a-site dialog,
+  whose latitude and longitude are ordinary number inputs, and whose values
+  open without a click on the map.
 
   The map is deck.gl, via the `pydeck` that ships with Streamlit, over a CARTO
   tile basemap (`TILE_BASEMAP` in [map_view.py](map_view.py)). Those tiles are
@@ -172,9 +180,9 @@ The site is chosen one of two ways, picked in the sidebar:
   offline alternative: Streamlit draws a CARTO basemap under every
   `st.pydeck_chart` whatever the deck asks for, reading `map_style=None` as
   "pick one from the theme" rather than "draw none". Without a connection the
-  pins are left on an empty background. The design values behind them are
-  answered from the committed responses either way, and **Custom coordinates**
-  is the part that genuinely needs the network, for its live USGS pull.
+  pins are left on an empty background. The mapped sites' design values are
+  answered from the committed responses either way; adding a site is the part
+  that genuinely needs the network, for its live USGS pull.
 
 Streamlit is a Python web framework, so the app always runs on a Python host —
 either your own machine or a server. To run it locally, follow

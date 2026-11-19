@@ -38,9 +38,11 @@ SITES = pd.DataFrame(
 SELECTED_ID = 2
 
 
-def site_layer(selected_id=None) -> dict:
+def site_layer(selected_id=None, custom_ids=()) -> dict:
     """The serialised site layer, as the browser receives it."""
-    spec = json.loads(map_view.site_map(SITES, selected_id).to_json())
+    spec = json.loads(
+        map_view.site_map(SITES, selected_id, custom_ids=custom_ids).to_json()
+    )
     layers = [
         layer for layer in spec["layers"] if layer.get("id") == map_view.SITE_LAYER_ID
     ]
@@ -64,6 +66,40 @@ def test_nothing_is_selected_without_a_site_on_the_map(selected_id):
     """No selection, and an id that is not on the map, select nothing."""
     rows = site_layer(selected_id)["data"]
     assert {row["icon"] for row in rows} == {map_view.DEFAULT_PIN}
+
+
+def test_an_added_site_draws_the_green_pin():
+    """A site added by coordinate is marked on the map by its own colour."""
+    rows = {row["id"]: row for row in site_layer(custom_ids=[3])["data"]}
+
+    assert rows[3]["icon"] == map_view.CUSTOM_PIN
+    assert rows[3]["size"] == map_view.PIN_SIZE
+    for site_id in (1, 2):
+        assert rows[site_id]["icon"] == map_view.DEFAULT_PIN
+
+
+def test_selecting_an_added_site_still_marks_it_selected():
+    """Selection beats origin, so there is one red pin to look for, not two
+    kinds of marked pin to tell apart."""
+    rows = {row["id"]: row for row in site_layer(3, custom_ids=[3])["data"]}
+
+    assert rows[3]["icon"] == map_view.SELECTED_PIN
+    assert rows[3]["size"] == map_view.SELECTED_PIN_SIZE
+
+
+def test_every_pin_state_is_in_the_atlas():
+    """An icon the atlas does not map draws nothing at all."""
+    assert set(map_view.PIN_ICON_MAPPING) == {
+        map_view.DEFAULT_PIN,
+        map_view.SELECTED_PIN,
+        map_view.CUSTOM_PIN,
+    }
+    width = max(
+        icon["x"] + icon["width"] for icon in map_view.PIN_ICON_MAPPING.values()
+    )
+    assert f'width="{width}"' in map_view.PIN_SVG, (
+        "the atlas image is narrower than the icons mapped out of it"
+    )
 
 
 def test_row_order_does_not_depend_on_the_selection():
