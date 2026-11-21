@@ -6,14 +6,14 @@ interactive caller that wants one arbitrary location, so this module exposes the
 same two stages for a single site:
 
 ``pull_site``
-    Fetch the USGS responses one site needs and return them as an in-memory
+    Fetch the hazard curves one site needs and return them as an in-memory
     entry (no disk I/O). The entry uses the same keys as
     :func:`frer.cache.new_entry`, so cached entries work here interchangeably.
 ``calc_site``
     Develop the FREr and DE design values for one entry.
 
 :func:`calc_site` holds the only implementation of the per-site calculation;
-:func:`frer.calc.calc_design_values` calls it for every row of a site set, so
+:func:`frer.calc.calc_design_values` calls it for every row of the site table, so
 the batch benchmark and any interactive caller exercise identical code.
 """
 
@@ -28,6 +28,7 @@ from .params import (
     FR_PARAMS,
     LS_PARAMS,
     NSHM_BOUNDS,
+    VERSION_ID,
     VERSION_NSHM,
     VS30_RANGE,
 )
@@ -44,7 +45,6 @@ class SiteResult:
     lat: float
     lon: float
     name: str
-    risk_category: str
     sds: float  # DE short-period design value
     sd1: float  # DE 1-second design value
     sdsfr: float  # FREr short-period design value
@@ -52,7 +52,7 @@ class SiteResult:
     fr_spectrum: RTSpectrum  # FREr multi-period spectrum
     de_period: np.ndarray  # DE multi-period spectrum periods (s)
     de_sa: np.ndarray  # DE multi-period spectrum ordinates (g)
-    ls_spectrum: RTSpectrum | None = None  # MCEr spectrum (ASCE 7-28 only)
+    ls_spectrum: RTSpectrum | None = None  # MCEr spectrum
 
     @property
     def nshm(self) -> int:
@@ -89,7 +89,6 @@ def new_entry(
     site_class: str,
     vs30: float,
     name: str = "",
-    risk_category: str = "II",
 ) -> dict:
     """Build an empty entry for an arbitrary location.
 
@@ -105,8 +104,6 @@ def new_entry(
         "region": None,
         "site_class": site_class,
         "vs30": float(vs30),
-        "risk_category": risk_category,
-        "design_values": None,
         "hazard_curves": {},
     }
 
@@ -116,27 +113,22 @@ def pull_site(
     lon: float,
     site_class: str,
     vs30: float,
-    version_id: str,
+    version_id: str = VERSION_ID,
     name: str = "",
-    risk_category: str = "II",
     timeout: float = usgs_api.TIMEOUT,
     session=None,
-    fetch_design=None,
     fetch_hazard=None,
 ) -> dict:
-    """Fetch the USGS data one site needs for ``version_id``; return an entry.
+    """Fetch the hazard curves one site needs; return an entry.
 
-    Only what the version actually uses is requested: ASCE 7-22 takes its DE
-    values from the design-value service and needs NSHM 2018 hazard curves,
-    while ASCE 7-28 is fully probabilistic and needs only NSHM 2023 curves.
-    By default both calls go through the retrying session built by
-    :func:`frer.usgs_api.build_session`.
+    ASCE 7-28 is fully probabilistic, so a site needs exactly one thing: the
+    NSHM 2023 hazard curves. The call goes through the retrying session built
+    by :func:`frer.usgs_api.build_session` by default.
 
-    ``fetch_design(lat, lon, site_class, risk_category)`` and
-    ``fetch_hazard(nshm, lat, lon, vs30)`` override how the raw responses are
+    ``fetch_hazard(nshm, lat, lon, vs30)`` overrides how the raw response is
     obtained -- a caller with its own cache (such as the Streamlit app) wraps
-    the :mod:`frer.usgs_api` functions and passes them in here rather than
-    reimplementing this function.
+    :mod:`frer.usgs_api` and passes it in here rather than reimplementing this
+    function.
 
     Raises :class:`ValueError` for an out-of-model location and
     :class:`frer.usgs_api.USGSApiError` if a call fails after its retries.
@@ -146,19 +138,6 @@ def pull_site(
     check_location(lat, lon)
     check_vs30(vs30)
 
-    if fetch_design is None:
-
-        def fetch_design(lat, lon, site_class, risk_category):
-            return usgs_api.call_design_value_api(
-                f"{lat:.4f}, {lon:.4f}",
-                lat,
-                lon,
-                risk_category=risk_category,
-                site_class=site_class,
-                timeout=timeout,
-                session=session,
-            )
-
     if fetch_hazard is None:
 
         def fetch_hazard(nshm, lat, lon, vs30):
@@ -166,10 +145,7 @@ def pull_site(
                 nshm, lat, lon, vs30, timeout=timeout, session=session
             )
 
-    entry = new_entry(lat, lon, site_class, vs30, name, risk_category)
-
-    if version_id == "ASCE 7-22":
-        entry["design_values"] = fetch_design(lat, lon, site_class, risk_category)
+    entry = new_entry(lat, lon, site_class, vs30, name)
 
     nshm = VERSION_NSHM[version_id]
     hazard = fetch_hazard(nshm, lat, lon, vs30)
@@ -177,7 +153,7 @@ def pull_site(
     return entry
 
 
-def calc_site(entry: dict, version_id: str) -> SiteResult:
+def calc_site(entry: dict, version_id: str = VERSION_ID) -> SiteResult:
     """Develop FREr and DE design values for one cached or freshly pulled site.
 
     ``entry`` is either a :func:`frer.cache.new_entry` dict loaded from the disk
@@ -193,20 +169,12 @@ def calc_site(entry: dict, version_id: str) -> SiteResult:
     # Develop design spectrum based on FR risk-target values
     rt_spectrum_fr = develop_rt_spectrum(hazard_curves, FR_PARAMS)
 
-    # Develop the DE (LS) spectrum
-    if version_id == "ASCE 7-28":
-        # Fully probabilistic MPS from the hazard curves
-        rt_spectrum_ls = develop_rt_spectrum(hazard_curves, LS_PARAMS)
-        ls_period = rt_spectrum_ls.period
-        ls_sa_de = (2 / 3) * rt_spectrum_ls.sa
-        sds, sd1 = develop_2point_design_values(ls_sa_de, ls_period)
-    else:  # ASCE 7-22: use the design-value web service results directly
-        rt_spectrum_ls = None  # no probabilistic LS spectrum for ASCE 7-22
-        dv = entry["design_values"]["response"]["data"]
-        ls_period = dv["multiPeriodDesignSpectrum"]["periods"]
-        ls_sa_de = dv["multiPeriodDesignSpectrum"]["ordinates"]
-        sds = dv["sds"]
-        sd1 = dv["sd1"]
+    # Develop the DE (LS) spectrum: a fully probabilistic MPS from the same
+    # hazard curves, with DE taken as 2/3 of MCE_R.
+    rt_spectrum_ls = develop_rt_spectrum(hazard_curves, LS_PARAMS)
+    ls_period = rt_spectrum_ls.period
+    ls_sa_de = (2 / 3) * rt_spectrum_ls.sa
+    sds, sd1 = develop_2point_design_values(ls_sa_de, ls_period)
 
     # 2-point design values for FREr
     sdsfr, sd1fr = develop_2point_design_values(
@@ -220,7 +188,6 @@ def calc_site(entry: dict, version_id: str) -> SiteResult:
         lat=entry["lat"],
         lon=entry["lon"],
         name=entry["name"],
-        risk_category=entry.get("risk_category", "II"),
         sds=sds,
         sd1=sd1,
         sdsfr=sdsfr,
@@ -315,10 +282,7 @@ def return_period_columns(result: SiteResult) -> dict:
     """Return-period CSV columns (years) at 0.2 s and 1.0 s.
 
     Reports the hazard-curve return period of the FRE_R, MCE_R, and DE spectral
-    ordinates (DE is 2/3 of MCE_R). Empty for ASCE 7-22: return periods are only
-    defined for the fully probabilistic ASCE 7-28 ground motions, whereas the
-    ASCE 7-22 design values mix risk-targeted and deterministic caps that have no
-    single hazard-curve return period.
+    ordinates (DE is 2/3 of MCE_R).
 
     Shared by the batch CSV writer and the single-site export so the two cannot
     drift apart in how they name columns.

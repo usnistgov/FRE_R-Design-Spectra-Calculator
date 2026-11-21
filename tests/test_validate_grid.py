@@ -94,7 +94,10 @@ def manifest(database) -> dict:
 
 def test_a_sound_database_passes_every_check(database, manifest, capsys):
     """All three offline checks pass on a database built the normal way."""
-    assert len(database) == len(SPEC) * len(SITE_CLASSES) == 16
+    # Four nodes times every site class. Not spelled as a literal: the set of
+    # classes is a project-wide decision (DEFAULT_SITE_CLASSES) and has grown
+    # once already, which is not a reason for this test to fail.
+    assert len(database) == len(SPEC) * len(SITE_CLASSES)
     validator.check_database(database, SPEC)
     validator.check_manifest(manifest, database, SPEC)
     validator.check_golden(database, SPEC)

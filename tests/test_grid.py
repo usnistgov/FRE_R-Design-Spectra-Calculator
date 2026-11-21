@@ -154,7 +154,7 @@ def golden_sites() -> pd.DataFrame:
     """usgs_160 sites inside the grid that land exactly on its nodes."""
     from frer.sites import load_sites
 
-    sites = load_sites(SITES_CSV, "usgs_160")
+    sites = load_sites(SITES_CSV)
     inside = sites[
         sites["lat"].between(BAY_AREA.lat_min, BAY_AREA.lat_max)
         & sites["lon"].between(BAY_AREA.lon_min, BAY_AREA.lon_max)
@@ -696,7 +696,7 @@ def test_every_validation_site_is_on_land_and_on_a_node():
     }
     from frer.sites import load_sites
 
-    sites = load_sites(SITES_CSV, "usgs_160")
+    sites = load_sites(SITES_CSV)
     inside = sites[
         sites["lat"].between(BAY_AREA.lat_min, BAY_AREA.lat_max)
         & sites["lon"].between(BAY_AREA.lon_min, BAY_AREA.lon_max)

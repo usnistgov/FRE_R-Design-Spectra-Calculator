@@ -22,21 +22,20 @@ from pathlib import Path
 
 import pandas as pd
 
-from frer.cache import covers_site_set
+from frer.cache import covers_sites
 from frer.calc import calc_design_values
+from frer.params import VERSION_ID
 from frer.single import (
     SD1FR_COLUMN,
     SDSFR_COLUMN,
     rename_legacy_spectral_columns,
 )
+from frer.sites import SITE_SET
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 CACHE_DIR = TESTS_DIR / "usgs_cache"
 SITES_CSV = REPO_ROOT / "sites.csv"
-
-SITE_SETS = ["frtc_testbed", "nehrp_34", "usgs_160"]
-VERSIONS = ["ASCE 7-22", "ASCE 7-28"]
 
 FRER_COLS = (SDSFR_COLUMN, SD1FR_COLUMN)  # plus any frer_mps_* columns
 
@@ -62,7 +61,12 @@ def _summarize(
     removed = (merged["_merge"] == "left_only").sum()
 
     both = merged[merged["_merge"] == "both"]
-    frer_cols = _frer_columns(new)
+    # Only columns present on both sides can be compared. A column the old
+    # fixture never had -- the per-period frer_mps_* ordinates, which used to
+    # be written for one site set only -- is reported as new rather than
+    # crashing the summary it is supposed to inform.
+    frer_cols = [c for c in _frer_columns(new) if f"{c}_old" in merged.columns]
+    fresh_cols = [c for c in _frer_columns(new) if f"{c}_old" not in merged.columns]
     worst_rel, worst_where, changed = 0.0, "", 0
     for _, row in both.iterrows():
         for col in frer_cols:
@@ -82,56 +86,39 @@ def _summarize(
         f"max FREr change {worst_rel:.2%}"
         + (f" at {worst_where}" if worst_where else "")
     )
+    if fresh_cols:
+        print(f"    {len(fresh_cols)} FREr column(s) are new: {fresh_cols[0]} ...")
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--site-set", choices=SITE_SETS, help="only this site set")
-    ap.add_argument("--version", choices=VERSIONS, help="only this code version")
     ap.add_argument(
         "--plots", action="store_true", help="also regenerate plots (default: CSV only)"
     )
     args = ap.parse_args(argv)
 
-    site_sets = [args.site_set] if args.site_set else SITE_SETS
-    versions = [args.version] if args.version else VERSIONS
-
-    wrote_any = False
     print(f"Regenerating fixtures from frozen cache: {CACHE_DIR}")
-    for site_set in site_sets:
-        if not covers_site_set(CACHE_DIR, SITES_CSV, site_set):
-            print(
-                f"  {site_set}: SKIP (frozen cache incomplete; "
-                f"`frer pull --site-set {site_set} --cache-dir {CACHE_DIR}`)"
-            )
-            continue
-        for version in versions:
-            target = TESTS_DIR / site_set / version / "frer_design_vals.csv"
-            # An existing fixture may predate the orientation suffixes on
-            # the spectral columns; normalise so the diff lines up.
-            old = (
-                rename_legacy_spectral_columns(pd.read_csv(target))
-                if target.exists()
-                else None
-            )
-            # calc writes to out_dir/<site_set>/<version>/frer_design_vals.csv,
-            # i.e. straight into the fixture location when out_dir == tests/.
-            new = calc_design_values(
-                SITES_CSV,
-                CACHE_DIR,
-                site_set,
-                version,
-                TESTS_DIR,
-                make_plots=args.plots,
-            )
-            _summarize(site_set, version, old, new)
-            wrote_any = True
-
-    if not wrote_any:
-        print("Nothing regenerated (no complete frozen cache for the selection).")
+    if not covers_sites(CACHE_DIR, SITES_CSV):
+        print(
+            f"  SKIP: the frozen cache does not cover every (site, class) pair. "
+            f"Rebuild it with `python scripts/build_cache_from_release.py "
+            f"--out {CACHE_DIR} --adopt`."
+        )
         return 1
+
+    target = TESTS_DIR / SITE_SET / VERSION_ID / "frer_design_vals.csv"
+    # An existing fixture may predate the orientation suffixes on the spectral
+    # columns; normalise so the diff lines up.
+    old = (
+        rename_legacy_spectral_columns(pd.read_csv(target)) if target.exists() else None
+    )
+    # calc writes to out_dir/<site set>/<version>/frer_design_vals.csv, i.e.
+    # straight into the fixture location when out_dir == tests/.
+    new = calc_design_values(SITES_CSV, CACHE_DIR, TESTS_DIR, make_plots=args.plots)
+    _summarize(SITE_SET, VERSION_ID, old, new)
+
     print("\nDone. Review the changes with `git diff -- tests/` before committing.")
     return 0
 

@@ -110,7 +110,7 @@ def two_point_spectrum(sds: float, sd1: float, t_start: float = 0.01):
 
 
 def develop_2point_design_values(sa: np.ndarray, period: np.ndarray):
-    """Calculate two-point spectral design values per ASCE 7-22 Section 21.4.
+    """Calculate two-point spectral design values per ASCE 7 Section 21.4.
 
     Returns
     -------

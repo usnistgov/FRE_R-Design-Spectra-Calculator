@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from frer import landmask
+from frer import landmask, usgs_api
 from frer.grid import (
     BAY_AREA,
     COORD_DECIMALS,
@@ -50,18 +50,18 @@ from frer.grid import (
     rows_from_cache,
     worst_differences,
 )
-from frer.params import DEFAULT_SITE_CLASSES
+from frer.params import DEFAULT_SITE_CLASSES, VERSION_ID
 from frer.single import rename_legacy_spectral_columns
-from frer.sites import load_sites
+from frer.sites import SITE_SET, load_sites
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 CACHE_DIR = TESTS_DIR / "usgs_cache"
 SITES_CSV = REPO_ROOT / "sites.csv"
 DATA_DIR = REPO_ROOT / "data" / "grid"
-REFERENCE_SET = "usgs_160"
+REFERENCE_SET = SITE_SET
 
-VERSION = "ASCE 7-28"
+VERSION = VERSION_ID
 SITE_CLASSES = list(DEFAULT_SITE_CLASSES)
 RTOL = 0.02
 
@@ -294,7 +294,7 @@ def check_manifest(manifest: dict, table: pd.DataFrame, spec) -> None:
 
 
 def golden_sites(spec) -> pd.DataFrame:
-    sites = load_sites(SITES_CSV, REFERENCE_SET)
+    sites = load_sites(SITES_CSV)
     inside = sites[
         sites["lat"].between(spec.lat_min, spec.lat_max)
         & sites["lon"].between(spec.lon_min, spec.lon_max)
@@ -347,10 +347,48 @@ def check_golden(table: pd.DataFrame, spec) -> None:
     report(relative_differences(from_db, reference), "database vs committed reference")
 
 
-def check_live(table: pd.DataFrame, count: int, seed: int | None) -> None:
+def reproducible_nodes(table: pd.DataFrame, precision: int) -> pd.DataFrame:
+    """Rows whose coordinates survive the precision they were requested at.
+
+    A database built when the client sent fewer decimal places than it does now
+    holds, for any node needing more, the hazard at a nearby point rather than
+    at the node itself. Re-pulling such a node cannot reproduce it, and the
+    mismatch would say nothing about whether the database is sound. Those rows
+    are excluded from the live check rather than counted as failures, and the
+    exclusion is driven by the manifest so it disappears on its own once a
+    database is rebuilt at full precision.
+    """
+    if precision >= usgs_api.COORD_PRECISION:
+        return table
+    keep = table.apply(
+        lambda row: (
+            float(f"{row.lat:.{precision}f}") == row.lat
+            and float(f"{row.lon:.{precision}f}") == row.lon
+        ),
+        axis=1,
+    )
+    return table[keep]
+
+
+def check_live(
+    table: pd.DataFrame, count: int, seed: int | None, precision: int
+) -> None:
     """Re-pull a sample of nodes and compare to what is stored."""
     section(f"5. Live spot check ({count} nodes)")
-    sample = table.sample(count, random_state=seed)
+    usable = reproducible_nodes(table, precision)
+    if len(usable) < len(table):
+        print(
+            f"  {len(table) - len(usable)} of {len(table)} rows were requested "
+            f"at {precision} decimal places and cannot be reproduced at the "
+            f"{usgs_api.COORD_PRECISION} this client now sends; sampling the "
+            f"remaining {len(usable)}"
+        )
+    if usable.empty:
+        raise ValidationError(
+            "no node in this database was requested at full precision, so "
+            "none can be re-pulled; rebuild it before validating live"
+        )
+    sample = usable.sample(min(count, len(usable)), random_state=seed)
     rows = []
     for row in sample.itertuples():
         print(f"  pulling {row.lat:.4f},{row.lon:.4f} [{row.site_class}] ...")
@@ -398,7 +436,12 @@ def main(argv=None) -> int:
         check_golden(table, spec)
         if args.network:
             random.seed(args.seed)
-            check_live(table, args.nodes, args.seed)
+            check_live(
+                table,
+                args.nodes,
+                args.seed,
+                int(manifest.get("coordinate_precision", usgs_api.COORD_PRECISION)),
+            )
     except ValidationError as error:
         print(f"\n  FAIL  {error}")
         print("\nValidation failed.")

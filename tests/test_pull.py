@@ -17,9 +17,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 
 from frer import cache, pull, usgs_api
+from frer.params import DEFAULT_SITE_CLASSES
 
-# Minimal well-formed response bodies (shape only; values are irrelevant here).
-DESIGN_OK = (200, {"response": {"data": {"sds": 1.0, "sd1": 0.5}}})
+# Minimal well-formed response body (shape only; values are irrelevant here).
 HAZARD_OK = (200, {"status": "success", "response": {"hazardCurves": [{"imt": "x"}]}})
 
 
@@ -38,7 +38,7 @@ class _StubServer(ThreadingHTTPServer):
         return f"{host}:{port}"
 
     def next_response(self, path):
-        key = "design" if "designmaps" in path else "hazard"
+        key = "hazard"
         self.counts[key] = self.counts.get(key, 0) + 1
         behavior = self.behaviors.get(key, HAZARD_OK)
         if callable(behavior):
@@ -75,12 +75,7 @@ def stub(monkeypatch):
         usgs_api,
         "HAZARD_URL",
         f"http://{server.base}/hazard/conus-{{edition}}/"
-        f"{{lon:.2f}}/{{lat:.2f}}/{{vs30:d}}",
-    )
-    monkeypatch.setattr(
-        usgs_api,
-        "DESIGN_MAPS_URL",
-        f"http://{server.base}/designmaps/{{reference_doc}}.json",
+        f"{{lon:.4f}}/{{lat:.4f}}/{{vs30:d}}",
     )
     try:
         yield server
@@ -94,8 +89,7 @@ def mini_sites(tmp_path):
     """A one-row sites.csv sufficient for the pull path."""
     path = tmp_path / "sites.csv"
     path.write_text(
-        "id,name,lat,lon,region,site_class,vs30\n"
-        "1,Testville,34.00,-118.00,West,D,265\n",
+        "id,name,lat,lon,region\n1,Testville,34.00,-118.00,West\n",
         encoding="utf-8",
     )
     return path
@@ -111,7 +105,7 @@ def _fast_session(retries):
 
 def test_hazard_success(stub):
     stub.behaviors["hazard"] = HAZARD_OK
-    data = usgs_api.call_hazard_api(2018, 34.0, -118.0, 760, session=_fast_session(3))
+    data = usgs_api.call_hazard_api(2023, 34.0, -118.0, 760, session=_fast_session(3))
     assert data["status"] == "success"
     assert stub.counts["hazard"] == 1
 
@@ -119,7 +113,7 @@ def test_hazard_success(stub):
 def test_hazard_retries_then_succeeds(stub):
     # Rate-limited twice, then OK: the call should transparently recover.
     stub.behaviors["hazard"] = lambda n: HAZARD_OK if n > 2 else (429, {})
-    data = usgs_api.call_hazard_api(2018, 34.0, -118.0, 760, session=_fast_session(5))
+    data = usgs_api.call_hazard_api(2023, 34.0, -118.0, 760, session=_fast_session(5))
     assert data["status"] == "success"
     assert stub.counts["hazard"] == 3
 
@@ -127,7 +121,7 @@ def test_hazard_retries_then_succeeds(stub):
 def test_hazard_persistent_5xx_raises_after_retries(stub):
     stub.behaviors["hazard"] = (503, {})
     with pytest.raises(usgs_api.USGSApiError):
-        usgs_api.call_hazard_api(2018, 34.0, -118.0, 760, session=_fast_session(2))
+        usgs_api.call_hazard_api(2023, 34.0, -118.0, 760, session=_fast_session(2))
     assert stub.counts["hazard"] == 3  # 1 initial + 2 retries
 
 
@@ -139,7 +133,7 @@ def test_hazard_app_error_is_retried_a_few_times_then_raises(stub):
     stub.behaviors["hazard"] = (200, {"status": "error"})
     with pytest.raises(usgs_api.USGSApiError):
         usgs_api.call_hazard_api(
-            2018, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
+            2023, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
         )
     assert stub.counts["hazard"] == usgs_api.ERROR_RETRIES + 1
 
@@ -156,17 +150,10 @@ def test_hazard_app_error_that_clears_is_recovered(stub):
         HAZARD_OK if n > 1 else (200, {"status": "error"})
     )
     data = usgs_api.call_hazard_api(
-        2018, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
+        2023, 34.0, -118.0, 760, session=_fast_session(5), error_backoff=0
     )
     assert data["status"] == "success"
     assert stub.counts["hazard"] == 2
-
-
-def test_design_success(stub):
-    stub.behaviors["design"] = DESIGN_OK
-    data = usgs_api.call_design_value_api(1, 34.0, -118.0, session=_fast_session(3))
-    assert data["response"]["data"]["sds"] == 1.0
-    assert stub.counts["design"] == 1
 
 
 def test_connection_error_is_wrapped(monkeypatch):
@@ -179,61 +166,65 @@ def test_connection_error_is_wrapped(monkeypatch):
         usgs_api,
         "HAZARD_URL",
         f"http://127.0.0.1:{dead_port}/hazard/conus-{{edition}}/"
-        f"{{lon:.2f}}/{{lat:.2f}}/{{vs30:d}}",
+        f"{{lon:.4f}}/{{lat:.4f}}/{{vs30:d}}",
     )
     with pytest.raises(usgs_api.USGSApiError):
-        usgs_api.call_hazard_api(2018, 34.0, -118.0, 760, session=_fast_session(1))
+        usgs_api.call_hazard_api(2023, 34.0, -118.0, 760, session=_fast_session(1))
 
 
 # --- pull_sites orchestration ----------------------------------------------
 
 
 def test_pull_happy_path(stub, tmp_path, mini_sites):
-    stub.behaviors["design"] = DESIGN_OK
     stub.behaviors["hazard"] = HAZARD_OK
     cdir = tmp_path / "cache"
     stats = pull.pull_sites(
-        mini_sites, cdir, pause=0, editions=(2018, 2023), session=_fast_session(2)
+        mini_sites, cdir, pause=0, editions=(2023,), session=_fast_session(2)
     )
     assert stats["failed"] == 0
-    assert stats["calls"] == 3  # design + two hazard editions
+    # One site, one call per site class.
+    assert stats["calls"] == len(DEFAULT_SITE_CLASSES)
     entry = cache.load_entry(cdir, 1, "D")
-    assert entry["design_values"] is not None
-    assert set(entry["hazard_curves"]) == {"2018", "2023"}
+    assert set(entry["hazard_curves"]) == {"2023"}
 
 
 def test_pull_failure_is_recorded_and_continues(stub, tmp_path, mini_sites):
     # Design succeeds; hazard is persistently down. The run must finish, mark
-    # the hazard calls failed, and still cache what did succeed.
-    stub.behaviors["design"] = DESIGN_OK
+    # the hazard calls failed, and still write an entry for what did not.
     stub.behaviors["hazard"] = (503, {})
     cdir = tmp_path / "cache"
     stats = pull.pull_sites(
-        mini_sites, cdir, pause=0, editions=(2018, 2023), session=_fast_session(1)
+        mini_sites, cdir, pause=0, editions=(2023,), session=_fast_session(1)
     )
-    assert stats["failed"] == 2  # both editions, no exception raised
+    # One failure per site class, and no exception raised.
+    assert stats["failed"] == len(DEFAULT_SITE_CLASSES)
     entry = cache.load_entry(cdir, 1, "D")
-    assert entry["design_values"] is not None
     assert entry["hazard_curves"] == {}
 
 
 def test_pull_resumes_without_recalling(stub, tmp_path, mini_sites):
-    # A fully-cached entry should trigger zero HTTP requests on re-run.
+    # A fully-cached site should trigger zero HTTP requests on re-run.
     cdir = tmp_path / "cache"
-    entry = cache.new_entry(
-        {"id": 1, "name": "Testville", "lat": 34.0, "lon": -118.0, "region": "West"},
-        "D",
-        265,
-    )
-    entry["design_values"] = {"response": {"data": {}}}
-    entry["hazard_curves"] = {"2018": [], "2023": []}
-    cache.save_entry(cdir, entry)
+    for site_class, vs30 in DEFAULT_SITE_CLASSES.items():
+        entry = cache.new_entry(
+            {
+                "id": 1,
+                "name": "Testville",
+                "lat": 34.0,
+                "lon": -118.0,
+                "region": "West",
+            },
+            site_class,
+            vs30,
+        )
+        entry["hazard_curves"] = {"2023": []}
+        cache.save_entry(cdir, entry)
 
     stats = pull.pull_sites(
-        mini_sites, cdir, pause=0, editions=(2018, 2023), session=_fast_session(1)
+        mini_sites, cdir, pause=0, editions=(2023,), session=_fast_session(1)
     )
     assert stats["calls"] == 0
-    assert stats["skipped"] == 3
+    assert stats["skipped"] == len(DEFAULT_SITE_CLASSES)
     assert stub.requests == []
 
 
@@ -253,7 +244,8 @@ def test_build_session_retry_configuration():
 
 
 @pytest.mark.network
-def test_live_design_value_smoke():
-    """One real design-maps call: it should return data without raising."""
-    data = usgs_api.call_design_value_api(1, 34.05, -118.25, site_class="D")
-    assert "sds" in data["response"]["data"]
+def test_live_hazard_smoke():
+    """One real hazard call: it should return curves without raising."""
+    data = usgs_api.call_hazard_api(2023, 34.05, -118.25, 260)
+    assert data["status"] == "success"
+    assert data["response"]["hazardCurves"]

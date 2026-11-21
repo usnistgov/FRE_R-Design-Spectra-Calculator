@@ -1,0 +1,19 @@
+{
+  "curves_file": "curves.csv",
+  "edition": "2023.R1",
+  "entries": 960,
+  "missing": [],
+  "nshm": 2023,
+  "release_dir": "C:\\Users\\dusti\\Repos\\FRE_R-Design-Spectra-Calculator\\data\\usgs hazard curve\\conus_2023.R1-MPRS-test_sites",
+  "site_classes": {
+    "BC": 760,
+    "C": 530,
+    "CD": 365,
+    "D": 260,
+    "DE": 185,
+    "E": 150
+  },
+  "site_set": "usgs_160",
+  "sites": 160,
+  "source": "USGS static hazard-curve data release"
+}

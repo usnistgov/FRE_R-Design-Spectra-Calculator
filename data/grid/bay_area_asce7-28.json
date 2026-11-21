@@ -12,6 +12,8 @@
     "Sdsfr_RotD50",
     "Sd1fr_RotD50"
   ],
+  "coordinate_precision": 2,
+  "coordinate_precision_note": "Nodes were requested at 2 decimal places, so the 745 nodes whose coordinates need 3 are hazard at a point up to 620 m away. The tool now sends 4 places, so a re-pull reproduces only the 270 nodes that lie on the 0.05 degree graticule.",
   "git_sha": "db539287788bd80a2221aede63ca7fe32d6c0c8d",
   "grid": {
     "coastline": "bay_area_land",
@@ -24,6 +26,8 @@
     "step": 0.025
   },
   "nshm": 2023,
+  "nshm_edition": "2023.R2",
+  "nshm_edition_note": "Built through the unversioned conus-2023 path, which served 2023.R2 at the time. The tool now pins conus-2023.R1. The two agree here: 8 nodes across all four site classes were re-pulled from R1 and matched to 0.0001%, consistent with R1 and R2 being identical across all 60 west-coast usgs_160 sites.",
   "preflight": {
     "adequate": true,
     "attempts": [],

@@ -3,9 +3,9 @@
 ``frer.calc.calc_design_values`` delegates to ``calc_site``, so the benchmark in
 test_benchmark.py already covers the math through the batch path. These tests
 cover the single-site API on its own terms: that it reproduces the committed
-reference values for a site, that its input guards reject out-of-model requests
-before any network call, and that ``pull_site`` asks for exactly the data a
-given code version needs.
+reference values for a site, that its input guards reject out-of-model
+requests before any network call, and that ``pull_site`` fetches the hazard
+curves.
 """
 
 import math
@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from frer.cache import load_entry
-from frer.params import NSHM_BOUNDS, VERSION_NSHM
+from frer.params import NSHM_BOUNDS, VERSION_ID, VERSION_NSHM
 from frer.single import (
     RP_PERIODS,
     SD1FR_COLUMN,
@@ -36,20 +36,21 @@ CACHE_DIR = TESTS_DIR / "usgs_cache"
 
 RTOL = 0.02  # matches the benchmark tolerance
 
-# A frtc_testbed site whose frozen cache and reference row are both committed.
-# id 168 is "Irvine CA - CFS UCSD", the one testbed site with site class C.
-SITE_ID = 168
+# A site whose frozen cache entry and reference row are both committed. Eureka
+# CA sits on the Cascadia margin, so its hazard curves are steep enough that an
+# error in the risk integral would show rather than round away.
+SITE_ID = 19
 SITE_CLASS = "C"
 
 
-def reference_row(version: str) -> pd.Series:
+def reference_row(version: str = VERSION_ID) -> pd.Series:
     """The committed reference row for the site under test."""
-    csv = TESTS_DIR / "frtc_testbed" / version / "frer_design_vals.csv"
+    csv = TESTS_DIR / "usgs_160" / version / "frer_design_vals.csv"
     # The fixture predates the orientation suffixes on the spectral columns, so
     # its names are mapped onto the current ones on read (see test_benchmark).
     table = rename_legacy_spectral_columns(pd.read_csv(csv))
-    match = table[table["site_class"] == SITE_CLASS]
-    assert len(match) == 1, f"expected exactly one class {SITE_CLASS} testbed row"
+    match = table[(table["id"] == SITE_ID) & (table["site_class"] == SITE_CLASS)]
+    assert len(match) == 1, f"expected one row for site {SITE_ID} class {SITE_CLASS}"
     return match.iloc[0]
 
 
@@ -77,11 +78,11 @@ def test_calc_site_carries_site_metadata():
     if entry is None:
         pytest.skip(f"no frozen cache for site {SITE_ID} class {SITE_CLASS}")
 
-    result = calc_site(entry, "ASCE 7-22")
+    result = calc_site(entry, VERSION_ID)
 
     assert result.site_class == SITE_CLASS
-    assert result.version_id == "ASCE 7-22"
-    assert result.nshm == VERSION_NSHM["ASCE 7-22"]
+    assert result.version_id == VERSION_ID
+    assert result.nshm == VERSION_NSHM[VERSION_ID]
     assert result.lat == entry["lat"]
     assert result.lon == entry["lon"]
     # DE and FREr spectra are both usable for plotting.
@@ -89,13 +90,13 @@ def test_calc_site_carries_site_metadata():
     assert len(result.fr_spectrum.period) == len(result.fr_spectrum.sa)
 
 
-def test_return_period_columns_asce728():
-    """ASCE 7-28 exposes FRE_R/MCE_R/DE return periods at 0.2 s and 1.0 s."""
+def test_return_period_columns():
+    """Every result exposes FRE_R/MCE_R/DE return periods at 0.2 s and 1.0 s."""
     entry = load_entry(CACHE_DIR, SITE_ID, SITE_CLASS)
     if entry is None:
         pytest.skip(f"no frozen cache for site {SITE_ID} class {SITE_CLASS}")
 
-    result = calc_site(entry, "ASCE 7-28")
+    result = calc_site(entry, VERSION_ID)
     cols = return_period_columns(result)
 
     expected_keys = {
@@ -110,18 +111,6 @@ def test_return_period_columns_asce728():
     for t in RP_PERIODS:
         s = f"{t:.1f}".replace(".", "p")
         assert cols[f"frer_rp_{s}"] < cols[f"de_rp_{s}"] < cols[f"mcer_rp_{s}"]
-
-
-def test_return_period_columns_absent_for_asce722():
-    """ASCE 7-22 has no hazard-curve return period, so no columns are added."""
-    entry = load_entry(CACHE_DIR, SITE_ID, SITE_CLASS)
-    if entry is None:
-        pytest.skip(f"no frozen cache for site {SITE_ID} class {SITE_CLASS}")
-
-    result = calc_site(entry, "ASCE 7-22")
-
-    assert result.ls_spectrum is None
-    assert return_period_columns(result) == {}
 
 
 def test_calc_site_rejects_unknown_version():
@@ -165,52 +154,28 @@ def test_pull_site_validates_before_fetching():
         raise AssertionError("should not have been called")
 
     with pytest.raises(ValueError, match="outside the conterminous"):
-        pull_site(
-            21.30,
-            -157.85,
-            "D",
-            260,
-            "ASCE 7-22",
-            fetch_design=spy,
-            fetch_hazard=spy,
-        )
+        pull_site(21.30, -157.85, "D", 260, VERSION_ID, fetch_hazard=spy)
     assert calls == []
 
 
-@pytest.mark.parametrize(
-    "version,wants_design",
-    [("ASCE 7-22", True), ("ASCE 7-28", False)],
-)
-def test_pull_site_requests_only_what_the_version_needs(version, wants_design):
-    """7-22 needs the design-value service; 7-28 is fully probabilistic."""
-    entry_curves = [{"imt": {"value": "PGA", "display": "PGA"}}]
-    design_calls, hazard_calls = [], []
+def test_pull_site_fetches_the_hazard_curves():
+    """A site needs one thing: the hazard curves for its NSHM year.
 
-    def fetch_design(lat, lon, site_class, risk_category):
-        design_calls.append((lat, lon, site_class, risk_category))
-        return {"response": {"data": {"sds": 1.0, "sd1": 0.5}}}
+    This used to assert which of two services each code version called, back
+    when ASCE 7-22 took its DE values from the design-value service. There is
+    one service now, and a result that mixes sources is no longer possible.
+    """
+    entry_curves = [{"imt": {"value": "PGA", "display": "PGA"}}]
+    hazard_calls = []
 
     def fetch_hazard(nshm, lat, lon, vs30):
         hazard_calls.append((nshm, lat, lon, vs30))
         return {"response": {"hazardCurves": entry_curves}}
 
-    entry = pull_site(
-        34.05,
-        -118.25,
-        "D",
-        260,
-        version,
-        risk_category="III",
-        fetch_design=fetch_design,
-        fetch_hazard=fetch_hazard,
-    )
+    entry = pull_site(34.05, -118.25, "D", 260, VERSION_ID, fetch_hazard=fetch_hazard)
 
-    nshm = VERSION_NSHM[version]
+    nshm = VERSION_NSHM[VERSION_ID]
     assert hazard_calls == [(nshm, 34.05, -118.25, 260)]
     assert entry["hazard_curves"][str(nshm)] == entry_curves
-    if wants_design:
-        assert design_calls == [(34.05, -118.25, "D", "III")]
-        assert entry["design_values"] is not None
-    else:
-        assert design_calls == []
-        assert entry["design_values"] is None
+    assert entry["site_class"] == "D"
+    assert entry["vs30"] == 260

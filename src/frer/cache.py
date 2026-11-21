@@ -1,9 +1,11 @@
 """JSON-per-site cache of USGS web-service responses.
 
 Each (site, site class) pair gets one JSON file in the cache directory:
-``site{id:04d}_{site_class}.json``, containing site metadata plus the raw
-design-value and hazard-curve responses. This naturally supports
-resume-on-failure: a pull re-run only fetches what is missing.
+``site{id:04d}_{site_class}.json``, containing site metadata plus the hazard
+curves, in the shape the hazard web service returns them. Entries are built
+either by ``frer pull`` or, for the frozen benchmark input, by
+``scripts/build_cache_from_release.py`` from a published data release; the two
+produce the same structure on purpose, so neither path is privileged.
 """
 
 import json
@@ -16,16 +18,17 @@ def cache_path(cache_dir: Path, site_id: int, site_class: str) -> Path:
     return Path(cache_dir) / f"site{int(site_id):04d}_{site_class}.json"
 
 
-def covers_site_set(cache_dir: Path, sites_csv: Path, site_set: str) -> bool:
-    """True if the cache has an entry file for every (site, class) in the set.
+def covers_sites(cache_dir: Path, sites_csv: Path) -> bool:
+    """True if the cache has an entry file for every (site, site class) pair.
 
-    Sites can belong to multiple sets, so a partially-cached set (e.g. usgs_160
-    sharing a few sites with nehrp_34) leaves stray files; require full coverage
-    so such a set is treated as "not cached" rather than partially processed.
+    All or nothing: a partially populated cache is treated as not cached
+    rather than as something to compute a partial answer from, because a
+    reference table missing rows is harder to notice than one that was never
+    produced.
     """
     from .sites import load_sites, site_class_list
 
-    sites = load_sites(sites_csv, site_set)
+    sites = load_sites(sites_csv)
     for _, row in sites.iterrows():
         for site_class, _vs30 in site_class_list(row):
             if not cache_path(cache_dir, row["id"], site_class).exists():
@@ -63,6 +66,5 @@ def new_entry(site_row: dict, site_class: str, vs30: float) -> dict:
         "region": site_row["region"],
         "site_class": site_class,
         "vs30": float(vs30),
-        "design_values": None,  # raw asce7-22 design maps response
-        "hazard_curves": {},  # keyed by NSHM year, e.g. "2018", "2023"
+        "hazard_curves": {},  # keyed by NSHM year, e.g. "2023"
     }

@@ -2,11 +2,13 @@
 
 Risk-targeted **Functional Recovery Earthquake (FRE<sub>R</sub>)** design value calculator.
 
-This tool pulls seismic hazard curves and code design values from USGS web
-services ([design maps](https://earthquake.usgs.gov/ws/designmaps/),
-[nshmp hazard](https://earthquake.usgs.gov/ws/nshmp/)), then develops
-risk-targeted multi-period and 2-point design spectra for the Functional
-Recovery Earthquake as documented in the 2026 NEHRP Seismic Provisions.
+This tool develops risk-targeted multi-period and 2-point design spectra for
+the Functional Recovery Earthquake, as documented in the 2026 NEHRP Seismic
+Provisions, from USGS [nshmp hazard](https://earthquake.usgs.gov/ws/nshmp/)
+curves.
+
+Everything it reports comes from one source: the hazard curves. There is no
+second service and no deterministic cap, so no result mixes two bases.
 
 ## Background
 
@@ -20,16 +22,29 @@ that produces a target lifetime risk of exceedance (the RTGM approach):
 | **FRE<sub>R</sub> (NERHP 2026)** | 0.6 | 25% | 10% | 50 yr | RotD50 (no conversion) |
 | **MCE<sub>R</sub> (ASCE 7-28)** | 0.6 | 10% | 1.5% | 50 yr | RotD100 (max-direction factors) |
 
-Two code versions are supported:
+**ASCE 7-28** is the one code version supported: both FREr and DE spectra are
+computed fully probabilistically from **NSHM 2023** hazard curves
+(DE = 2/3 × the MCE<sub>R</sub> spectrum).
 
-- **ASCE 7-22** — FREr spectra are computed from **NSHM 2018** hazard curves;
-  DE values (S<sub>DS</sub>, S<sub>D1</sub>, multi-period design spectrum) are
-  taken directly from the USGS ASCE 7-22 design-maps service.
-- **ASCE 7-28** — both FREr and DE spectra are computed fully probabilistically
-  from **NSHM 2023** hazard curves (DE = 2/3 × the MCE<sub>R</sub> spectrum).
+ASCE 7-22 was supported until 2026-11-20 and has been removed. It worked
+differently — its DE values came from the USGS design-maps service, which
+mixes risk-targeted and deterministic caps, while only its FREr values were
+developed here — so a 7-22 result had two halves on different bases and no
+single hazard-curve return period.
+
+### Model revision
+
+The hazard calls are pinned to **CONUS.2023.R1** (`conus-2023.R1`), not to the
+service's bare-year path. That path is an alias which follows whatever
+revision USGS currently serves, and it has already moved from R1 to R2: a
+cache pulled through it in July 2026 silently held R2 curves.
+
+R1 is the revision the committee adopted, so it is the basis of an official
+design value. R2 is a later science update — a better estimate of hazard, but
+not the adopted basis. See `frer.params.NSHM_EDITION`.
 
 From each multi-period spectrum, 2-point design values are derived per
-ASCE 7-22 §21.4:
+ASCE 7 §21.4:
 
 - S<sub>DS</sub> = 0.9 × max Sa over 0.2 s ≤ T ≤ 5 s
 - S<sub>D1</sub> = max( Sa(1.0 s), 0.9 × max(T·Sa) over 1 s ≤ T ≤ 2 s )
@@ -38,9 +53,8 @@ ASCE 7-22 §21.4:
 
 Per the table above, **FRE<sub>R</sub> and DE ordinates are not on the same
 basis.** FRE<sub>R</sub> keeps the RotD50 orientation of the underlying hazard
-curves; the DE/MCE<sub>R</sub> ordinates are max direction (RotD100) — for
-ASCE 7-28 via the max-direction factors in `frer.spectrum`, and for ASCE 7-22
-because the USGS design-value service reports max-direction values.
+curves; the DE/MCE<sub>R</sub> ordinates are max direction (RotD100), via the
+max-direction factors in `frer.spectrum`.
 
 Reading one straight against the other understates FRE<sub>R</sub> by the
 max-direction factor (1.2 at short periods, rising to 1.3 at 10 s). Convert one
@@ -86,16 +100,21 @@ cache) and **calc** (develop design values from the cache).
 ### 1. Pull USGS data
 
 ```bash
-frer pull --site-set frtc_testbed
+frer pull
 ```
 
-- Sites come from [sites.csv](sites.csv). Each row belongs to one or more
-  "site sets" (`usgs_160`, `nehrp_34`, `frtc_testbed`) via the `*_id`
-  columns. Omit `--site-set` to pull every site.
-- Sites with an explicit `site_class`/`vs30` use them; otherwise the four
-  default classes are pulled: BC (760 m/s), C (530), D (260), E (150).
-- Three calls are made per (site, class): ASCE 7-22 design values, NSHM 2018
-  hazard curves, and NSHM 2023 hazard curves (select with `--editions`).
+- Sites come from [sites.csv](sites.csv): 160 USGS NSHM test sites, all of
+  them. There used to be three overlapping "site sets"; `nehrp_34` was the
+  same 34 rows as a subset of these, and `frtc_testbed` was 9 street
+  addresses, so both are gone.
+- Six site classes are pulled per site: BC (760 m/s), C (530), CD (365),
+  D (260), DE (185), E (150).
+- One call is made per (site, class): the NSHM 2023 hazard curves, from the
+  pinned `conus-2023.R1` path.
+- **You probably do not need this.** The frozen cache the tests and the web
+  app read is built offline from the published data release instead — see
+  [Rebuilding the frozen cache](#rebuilding-the-frozen-cache). `frer pull` is
+  for points the release does not cover, such as grid nodes.
 - Results are cached one JSON file per (site, class) in `results/usgs_cache/`.
   The pull is **resumable**: failed calls are skipped and retried on the next
   run; already-cached data is never re-fetched.
@@ -104,35 +123,35 @@ frer pull --site-set frtc_testbed
   read timeouts) with exponential backoff + jitter, honoring the server's
   `Retry-After` header. Tune with `--retries` (default 5) and `--backoff`
   (default 1.0 s). A 200 response that reports a server-side calc error is
-  *not* retried (some coordinates genuinely fail — e.g. Reno NV class D on
-  NSHM 2018).
-- `--pause` (default 1 s) adds polite spacing between calls; raise it to be
-  gentler, but backoff already absorbs bursts. Slow high-seismicity sites may
-  need a larger `--timeout` (default 30 s). A full pull of all 169 sites still
-  takes a while — plan accordingly.
+  *not* retried (some coordinates genuinely fail).
+- `--pause` (default 10 s) adds polite spacing between calls, and it is not
+  mere politeness: the service throttles sustained use by answering HTTP 200
+  with an error body in a fraction of a second, which the retry layer never
+  sees because it only watches status codes. Slow high-seismicity sites may
+  need a larger `--timeout` (default 30 s). A full pull of all 160 sites at
+  six classes is 960 calls — plan on hours.
+- Coordinates are sent at four decimal places (about 11 m). This was two
+  places until 2026-11-20, which rounded a request by up to 620 m; the service
+  computes at the exact point given and snaps to no grid, so that mattered.
 
 ### 2. Calculate design values
 
 ```bash
-frer calc --site-set frtc_testbed --version asce7-22
-frer calc --site-set frtc_testbed --version asce7-28
+frer calc
 ```
 
-Outputs are written under `results/<site_set>/<version>/`:
+Outputs are written under `results/usgs_160/ASCE 7-28/`:
 
 - `frer_design_vals.csv` — one row per (site, class) with S<sub>DS</sub>,
-  S<sub>D1</sub>, S<sub>DSfr</sub>, S<sub>D1fr</sub>; the `frtc_testbed` set
-  also includes the full FREr multi-period spectrum (`frer_mps_*` columns).
+  S<sub>D1</sub>, S<sub>DSfr</sub>, S<sub>D1fr</sub> and the full FREr
+  multi-period spectrum (`frer_mps_*` columns).
   Every spectral column carries the ground-motion orientation its value is
   reported in, as a `_RotD50` / `_RotD100` suffix (`Sds_RotD100`,
   `Sdsfr_RotD50`, `frer_mps_0p20_RotD50`, ...) — see
   [Orientation](#orientation-rotd50-vs-rotd100) below. Return-period columns
   (`frer_rp_0p2`, `mcer_rp_0p2`, `de_rp_0p2`, ...) are deliberately unsuffixed:
   all six are read off the RotD50 hazard curve and share one orientation.
-- `Spectra_Plots - loglog/` — DE and FREr spectra plots (for `nehrp_34` and
-  `frtc_testbed`).
-- `Scatter Plots/` — FREr-vs-DE scatter comparisons by site class and region
-  (for `usgs_160`).
+- `Scatter Plots/` — FREr-vs-DE scatter comparisons by site class and region.
 
 Use `--no-plots` to skip figures, `--out-dir` / `--cache-dir` to relocate
 outputs and cache.
@@ -141,9 +160,8 @@ outputs and cache.
 
 For a single site, the calculator runs as a [Streamlit](https://streamlit.io)
 app. [app.py](app.py) performs both stages (pull, then calc) for one location
-and displays a section per code version — FREr and DE design values, return
-periods, an interactive spectra chart and the multi-period ordinates — with
-ASCE 7-28 first and ASCE 7-22 below it, then one CSV of both to download.
+and displays the FREr and DE design values, return periods, an interactive
+spectra chart and the multi-period ordinates, then a CSV to download.
 
 The page is a map, and every site is a pin on it:
 
@@ -202,11 +220,11 @@ status and unusable curves.
 ```
 ├── app.py                     # Streamlit single-site web app
 ├── map_view.py                # zoomable deck.gl site map for the web app
-├── sites.csv                  # site table with site-set membership
+├── sites.csv                  # the 160 USGS NSHM test sites
 ├── conftest.py                # puts the repo root on sys.path for pytest
 ├── src/frer/
 │   ├── cli.py                 # `frer` command-line interface
-│   ├── usgs_api.py            # USGS design-maps + nshmp hazard clients
+│   ├── usgs_api.py            # nshmp hazard client (pinned to one revision)
 │   ├── pull.py                # rate-limited, resumable data pull
 │   ├── cache.py               # JSON-per-site cache
 │   ├── rtgm.py                # risk-targeted ground motion integration
@@ -214,11 +232,13 @@ status and unusable curves.
 │   ├── single.py              # single-site pull/calc (used by calc.py and app.py)
 │   ├── calc.py                # design-value workflow / CSV output
 │   ├── plots.py               # spectra and scatter plots
-│   ├── sites.py               # sites.csv loading and site-set expansion
-│   ├── params.py              # code versions and risk-target parameters
+│   ├── sites.py               # sites.csv loading and site-class expansion
+│   ├── local_hazard.py        # read a published data release as API responses
+│   ├── params.py              # code version, model revision, risk targets
 │   └── grid.py                # gridded design values over a region
 ├── scripts/
-│   ├── update_fixtures.py     # regenerate the reference CSVs (deliberate)
+│   ├── build_cache_from_release.py  # build the frozen cache (deliberate)
+│   ├── update_fixtures.py     # regenerate the reference CSV (deliberate)
 │   ├── build_grid.py          # build the gridded database (deliberate)
 │   └── validate_grid.py       # check the gridded database
 ├── tests/
@@ -226,36 +246,44 @@ status and unusable curves.
 │   ├── test_benchmark.py      # benchmark FREr values vs the reference
 │   ├── test_single.py         # single-site API vs the reference + input guards
 │   ├── test_pull.py           # pull resilience (retry/backoff) tests
+│   ├── test_api_spot_check.py # the frozen cache vs the live service (opt-in)
 │   ├── test_map_view.py       # site map layers + click payload contracts
 │   ├── test_grid.py           # grid geometry, resume, golden nodes
 │   ├── test_validate_grid.py  # the validator, and every way it should fail
 │   ├── conftest.py            # `network` marker / --run-network option
-│   ├── usgs_cache/            # frozen USGS responses (benchmark input)
-│   └── <site_set>/<version>/  # reference frer_design_vals.csv + plots
+│   ├── usgs_cache/            # frozen hazard curves (benchmark input)
+│   └── usgs_160/ASCE 7-28/    # reference frer_design_vals.csv
 └── results/                   # generated outputs + live usgs_cache/ (git-ignored)
 ```
 
 ## Testing & validation
 
-The benchmark suite lives in `tests/`. Reference design values are stored under
-`tests/<site_set>/<version>/`, and a frozen snapshot of the USGS responses that
-produce them is committed in `tests/usgs_cache/` — so the benchmark runs offline
-and never calls the network. Run everything with:
+The benchmark suite lives in `tests/`. Reference design values are stored in
+`tests/usgs_160/ASCE 7-28/`, and the hazard curves that produce them are
+committed in `tests/usgs_cache/` — so the benchmark runs offline and never
+calls the network. Run everything with:
 
 ```bash
 pytest
 ```
 
 `test_spectrum.py` covers the deterministic spectrum math. `test_benchmark.py`
-recomputes each site set from the frozen cache and asserts the **FREr values**
-(`Sdsfr_RotD50`, `Sd1fr_RotD50`, and the `frer_mps_*_RotD50` spectrum) match the
-reference within a 2% tolerance. The committed fixtures predate the orientation
-suffixes and hold the MATLAB reference values, so they are read through
-`rename_legacy_spectral_columns` rather than regenerated — regenerating them
-from Python would destroy what the benchmark compares against. It deliberately
-does **not** check `Sds`/`Sd1`: for ASCE 7-22
-those are returned by the USGS design-maps service, which is the source of truth
-for its own output, so drift there is not a calculator regression.
+recomputes all 960 rows from the frozen cache and asserts the **FREr values**
+(`Sdsfr_RotD50`, `Sd1fr_RotD50`, and the 22 `frer_mps_*_RotD50` ordinates)
+match the reference within a 2% tolerance. It also checks the return periods
+against `frer_return_periods.csv`, which was written by the original MATLAB
+tool and is never regenerated — the only genuinely independent check here.
+
+`test_api_spot_check.py` is the one test that exercises the hazard call
+itself. The frozen cache is built from a data release rather than pulled, so
+nothing else would notice if the URL, the pinned revision or the coordinate
+precision broke. It re-pulls ten (site, class) pairs — spread across every
+region and every site class — from the live service and compares. It needs the
+network, so it is opt-in:
+
+```bash
+pytest --run-network -k api_spot_check
+```
 
 `test_pull.py` checks the **pull path's resilience** (not the returned values):
 against a local stub HTTP server it verifies that rate-limit/5xx/timeout
@@ -266,19 +294,35 @@ it with `pytest --run-network`.
 
 ### Updating the reference fixtures
 
-The reference CSVs are the source of truth and change only when you intend them
-to. When that time comes (e.g. after an intentional cache refresh, or to adopt
-current Python output as the baseline), regenerate them from the frozen cache:
+The reference CSV is the source of truth and changes only when you intend it
+to. When that time comes — after rebuilding the frozen cache, say — regenerate
+it from that cache:
 
 ```bash
-python scripts/update_fixtures.py            # all cached site sets
-python scripts/update_fixtures.py --site-set nehrp_34
+python scripts/update_fixtures.py
 ```
 
-It recomputes `frer_design_vals.csv` in place under `tests/<site_set>/<version>/`
-and prints what changed. It never pulls from USGS and never touches
-`tests/usgs_cache/` (refreshing that cache is a separate, manual `frer pull`).
-Review with `git diff -- tests/` and commit deliberately.
+It recomputes `frer_design_vals.csv` in place under
+`tests/usgs_160/ASCE 7-28/` and prints what changed. It never pulls from USGS
+and never touches `tests/usgs_cache/`. Review with `git diff -- tests/` and
+commit deliberately.
+
+### Rebuilding the frozen cache
+
+`tests/usgs_cache/` is built from the USGS
+[CONUS.2023.R1 data release](https://www.sciencebase.gov/catalog/), not pulled
+from the web service. All 160 sites are NSHM test sites, so the release covers
+every one of them, at every site class:
+
+```bash
+python scripts/build_cache_from_release.py --out tests/usgs_cache --adopt
+```
+
+Seconds rather than hours, byte-for-byte reproducible, pinned to one model
+revision by construction, and about 11 MB rather than 344 MB — the release
+carries the total curve where the service response also carries a
+per-magnitude breakdown nothing here reads. It needs the release unpacked
+locally; point `--release-dir` at it.
 
 ## Development
 

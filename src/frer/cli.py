@@ -2,8 +2,13 @@
 
 Commands
 --------
-frer pull : download USGS design values and hazard curves into the JSON cache
+frer pull : download NSHM hazard curves into the JSON cache
 frer calc : develop FREr/DE design values from the cache
+
+Both act on the whole site table and on ASCE 7-28, the one code version this
+tool develops values for. ``frer pull`` is for refreshing the cache from the
+web service; the frozen benchmark cache is built offline from a published data
+release instead (``scripts/build_cache_from_release.py``).
 """
 
 import argparse
@@ -11,12 +16,8 @@ from pathlib import Path
 
 from . import usgs_api
 from .cache import DEFAULT_CACHE_DIR
-from .sites import SITE_SETS
-
-VERSION_ALIASES = {
-    "asce7-22": "ASCE 7-22",
-    "asce7-28": "ASCE 7-28",
-}
+from .params import VERSION_ID, VERSION_NSHM
+from .sites import SITE_SET
 
 
 def main(argv=None):
@@ -28,20 +29,12 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
 
     # frer pull
-    p_pull = sub.add_parser(
-        "pull", help="download USGS design values and hazard curves into the cache"
-    )
+    p_pull = sub.add_parser("pull", help="download NSHM hazard curves into the cache")
     p_pull.add_argument(
         "--sites",
         type=Path,
         default=Path("sites.csv"),
         help="site table CSV (default: sites.csv)",
-    )
-    p_pull.add_argument(
-        "--site-set",
-        choices=SITE_SETS,
-        default=None,
-        help="restrict to one site set (default: all sites)",
     )
     p_pull.add_argument(
         "--cache-dir",
@@ -95,28 +88,20 @@ def main(argv=None):
         "--editions",
         type=int,
         nargs="+",
-        default=[2018, 2023],
-        help="NSHM years to pull hazard curves for (default: 2018 2023)",
+        default=sorted(VERSION_NSHM.values()),
+        help=f"NSHM years to pull hazard curves for "
+        f"(default: {' '.join(str(y) for y in sorted(VERSION_NSHM.values()))})",
     )
 
     # frer calc
     p_calc = sub.add_parser(
-        "calc", help="develop FREr/DE design values from cached USGS data"
+        "calc", help="develop FREr/DE design values from the cached hazard curves"
     )
     p_calc.add_argument(
         "--sites",
         type=Path,
         default=Path("sites.csv"),
         help="site table CSV (default: sites.csv)",
-    )
-    p_calc.add_argument(
-        "--site-set", choices=SITE_SETS, required=True, help="site set to calculate"
-    )
-    p_calc.add_argument(
-        "--version",
-        choices=sorted(VERSION_ALIASES),
-        required=True,
-        help="code version: asce7-22 (NSHM 2018) or asce7-28 (NSHM 2023)",
     )
     p_calc.add_argument(
         "--cache-dir",
@@ -140,7 +125,6 @@ def main(argv=None):
         stats = pull_sites(
             sites_csv=args.sites,
             cache_dir=args.cache_dir,
-            site_set=args.site_set,
             pause=(args.pause, max(args.pause, args.pause_max)),
             limit=args.limit,
             editions=tuple(args.editions),
@@ -158,16 +142,13 @@ def main(argv=None):
     elif args.command == "calc":
         from .calc import calc_design_values
 
-        version_id = VERSION_ALIASES[args.version]
         table = calc_design_values(
             sites_csv=args.sites,
             cache_dir=args.cache_dir,
-            site_set=args.site_set,
-            version_id=version_id,
             out_dir=args.out_dir,
             make_plots=not args.no_plots,
         )
-        out = Path(args.out_dir) / args.site_set / version_id
+        out = Path(args.out_dir) / SITE_SET / VERSION_ID
         print(f"Wrote {len(table)} rows to {out / 'frer_design_vals.csv'}")
 
 

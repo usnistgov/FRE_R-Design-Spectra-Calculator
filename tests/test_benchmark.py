@@ -1,22 +1,20 @@
 """Benchmark the FREr calculation against the reference design values here.
 
-Each ``tests/<site_set>/<version>/frer_design_vals.csv`` holds reference output.
-``tests/usgs_cache/`` holds a frozen snapshot of the USGS web-service responses
-that feed the calculation, so the benchmark is reproducible offline; refreshing
-that cache is a separate, deliberate ``frer pull`` (never done by the tests).
+``tests/usgs_160/ASCE 7-28/frer_design_vals.csv`` holds the reference output.
+``tests/usgs_cache/`` holds the frozen hazard curves that feed the calculation,
+built offline from the CONUS.2023.R1 data release, so the benchmark is
+reproducible with no network; rebuilding that cache is a separate, deliberate
+``scripts/build_cache_from_release.py --adopt`` (never done by the tests).
 
-Scope: these tests exercise only the **FREr** outputs (``Sdsfr_RotD50``,
-``Sd1fr_RotD50`` and the ``frer_mps_*_RotD50`` spectrum) via ``frer.calc`` --
-not the pull step, and not the DE values ``Sds_RotD100``/``Sd1_RotD100`` (for
-ASCE 7-22 those come straight from the USGS design-maps service, which is
-treated as the source of truth for itself).
+Scope: these tests exercise the **FREr** outputs (``Sdsfr_RotD50``,
+``Sd1fr_RotD50`` and the 22 ``frer_mps_*_RotD50`` ordinates) via ``frer.calc``
+-- not the pull step. The hazard call itself is checked separately, against the
+live service, by ``tests/test_api_spot_check.py``.
 
-For each (site set, version) whose cache is present, the FREr values are
-recomputed from the frozen cache and asserted to match the reference within
-``RTOL`` -- except a small, explicitly enumerated set of rows that are known to
-differ (see ``KNOWN_EXCEPTIONS``). Any new deviation fails.
+The FREr values are recomputed from the frozen cache and asserted to match the
+reference within ``RTOL``. Any deviation fails.
 
-To intentionally regenerate the reference CSVs, run
+To intentionally regenerate the reference CSV, run
 ``python scripts/update_fixtures.py`` (see that script's docstring).
 """
 
@@ -26,13 +24,15 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from frer.cache import covers_site_set
+from frer.cache import covers_sites
 from frer.calc import calc_design_values
+from frer.params import VERSION_ID
 from frer.single import (
     SD1FR_COLUMN,
     SDSFR_COLUMN,
     rename_legacy_spectral_columns,
 )
+from frer.sites import SITE_SET
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
@@ -41,14 +41,7 @@ SITES_CSV = REPO_ROOT / "sites.csv"
 
 RTOL = 0.02  # 2% relative tolerance
 
-CASES = [
-    ("frtc_testbed", "ASCE 7-22"),
-    ("frtc_testbed", "ASCE 7-28"),
-    ("nehrp_34", "ASCE 7-22"),
-    ("nehrp_34", "ASCE 7-28"),
-    ("usgs_160", "ASCE 7-22"),
-    ("usgs_160", "ASCE 7-28"),
-]
+REFERENCE_DIR = TESTS_DIR / SITE_SET / VERSION_ID
 
 # MATLAB reference column (frer_return_periods.csv) -> Python output column for
 # each of the six spectral-value return periods.
@@ -74,31 +67,23 @@ RP_RTOL_SOFT_SOIL = 0.10  # site class E only
 # exceed the tolerances above and are accepted as known deviations from the
 # MATLAB reference (recomputed from the committed frozen cache). The benchmark
 # emits a warning listing the live differences when these are hit, rather than
-# failing on them. The worst is Elgin OK (id 106) class E, DE at 1.0 s (~31%).
+# failing on them.
+#
+# This list held 21 entries while the frozen cache carried CONUS.2023.R2
+# curves, pulled through the service's bare-year path after that path had moved
+# on to R2. The MATLAB reference was produced from R1 -- the revision the
+# committee adopted -- so most of those "known deviations" were not deviations
+# in the port at all, but the cache having drifted onto a different model.
+# Rebuilding the cache from the R1 data release resolved 18 of them and
+# introduced none.
+#
+# What remains is three Cascadia-coastal class E sites at DE 0.2 s, all
+# differing by 11-13% in the same direction, which looks like one unexplained
+# cause rather than three coincidences.
 KNOWN_RP_EXCEPTIONS = {
-    # Site class D: steep-curve amplification just past the 2% band.
-    (80, "D", "DE_0p2"),  # New Madrid MO
-    (80, "D", "mcer_0p2"),  # New Madrid MO
-    (19, "D", "mcer_0p2"),  # Eureka CA
-    # Site class E: soft-soil hazard curves, past the 10% band.
-    (106, "E", "DE_1p0"),  # Elgin OK
-    (80, "E", "DE_0p2"),  # New Madrid MO
-    (106, "E", "DE_0p2"),  # Elgin OK
-    (106, "E", "mcer_1p0"),  # Elgin OK
-    (123, "E", "DE_1p0"),  # Charleston SC
-    (143, "E", "DE_1p0"),  # Richmond VA
     (19, "E", "DE_0p2"),  # Eureka CA
-    (116, "E", "DE_0p2"),  # Newport OR
-    (128, "E", "DE_1p0"),  # Knoxville TN
-    (129, "E", "DE_1p0"),  # Maryville TN
     (110, "E", "DE_0p2"),  # Brookings OR
-    (123, "E", "DE_0p2"),  # Charleston SC
-    (144, "E", "DE_1p0"),  # Burlington VT
-    (60, "E", "DE_1p0"),  # Savannah GA
-    (130, "E", "DE_1p0"),  # Memphis TN
-    (90, "E", "DE_1p0"),  # Manchester NH
-    (79, "E", "DE_1p0"),  # Cape Girardeau MO
-    (101, "E", "DE_1p0"),  # Malone NY
+    (116, "E", "DE_0p2"),  # Newport OR
 }
 
 
@@ -133,24 +118,21 @@ def _read_reference(path) -> pd.DataFrame:
     return rename_legacy_spectral_columns(pd.read_csv(path))
 
 
-def _recompute(site_set: str, version: str, out_dir) -> pd.DataFrame:
+def _recompute(out_dir) -> pd.DataFrame:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # skip-missing warnings are expected
-        return calc_design_values(
-            SITES_CSV, CACHE_DIR, site_set, version, out_dir, make_plots=False
-        )
+        return calc_design_values(SITES_CSV, CACHE_DIR, out_dir, make_plots=False)
 
 
-@pytest.mark.parametrize("site_set,version", CASES)
-def test_frer_benchmark(site_set, version, tmp_path):
-    reference_csv = TESTS_DIR / site_set / version / "frer_design_vals.csv"
+def test_frer_benchmark(tmp_path):
+    reference_csv = REFERENCE_DIR / "frer_design_vals.csv"
     if not reference_csv.exists():
-        pytest.skip(f"no reference CSV for {site_set} / {version}")
-    if not covers_site_set(CACHE_DIR, SITES_CSV, site_set):
-        pytest.skip(f"no frozen cache for {site_set}; run `frer pull` to add it")
+        pytest.skip("no reference CSV")
+    if not covers_sites(CACHE_DIR, SITES_CSV):
+        pytest.skip("frozen cache incomplete; rebuild it from the data release")
 
     expected = _read_reference(reference_csv)
-    actual = _recompute(site_set, version, tmp_path)
+    actual = _recompute(tmp_path)
     frer_cols = _frer_columns(expected)
 
     merged = expected.merge(
@@ -177,33 +159,32 @@ def test_frer_benchmark(site_set, version, tmp_path):
                 )
 
     assert not failures, (
-        f"{site_set} / {version}: {len(failures)} FREr value(s) exceed "
-        f"{RTOL:.0%} tolerance vs reference:\n" + "\n".join(failures)
+        f"{len(failures)} FREr value(s) exceed {RTOL:.0%} tolerance vs "
+        "reference:\n" + "\n".join(failures)
     )
 
 
 def test_return_period_benchmark(tmp_path):
-    """Return periods match the MATLAB reference for usgs_160 / ASCE 7-28.
+    """Return periods match the MATLAB reference.
 
     ``tests/usgs_160/ASCE 7-28/frer_return_periods.csv`` is the return-period
-    table written by the original MATLAB tool. Return periods are only defined
-    for ASCE 7-28 (the fully probabilistic option), so it is the only case with a
-    reference; the FRE_R/MCE_R/DE values are recomputed from the frozen cache and
-    compared column-by-column within the tolerances above.
+    table written by the original MATLAB tool and never regenerated here, which
+    makes it the only genuinely independent check in the suite. It covers the
+    four site classes that tool ran (BC/C/D/E); the CD and DE rows the cache
+    now carries have no counterpart in it and are simply not compared.
     """
-    site_set, version = "usgs_160", "ASCE 7-28"
-    reference_csv = TESTS_DIR / site_set / version / "frer_return_periods.csv"
+    reference_csv = REFERENCE_DIR / "frer_return_periods.csv"
     if not reference_csv.exists():
-        pytest.skip(f"no return-period reference CSV for {site_set} / {version}")
-    if not covers_site_set(CACHE_DIR, SITES_CSV, site_set):
-        pytest.skip(f"no frozen cache for {site_set}; run `frer pull` to add it")
+        pytest.skip("no return-period reference CSV")
+    if not covers_sites(CACHE_DIR, SITES_CSV):
+        pytest.skip("frozen cache incomplete; rebuild it from the data release")
 
     expected = _read_reference(reference_csv)
-    actual = _recompute(site_set, version, tmp_path)
+    actual = _recompute(tmp_path)
 
-    # Every ASCE 7-28 result row must carry the six return-period columns.
+    # Every result row must carry the six return-period columns.
     assert set(RP_COLUMN_MAP.values()) <= set(actual.columns), (
-        "recomputed ASCE 7-28 output is missing return-period columns: "
+        "recomputed output is missing return-period columns: "
         f"{sorted(set(RP_COLUMN_MAP.values()) - set(actual.columns))}"
     )
 

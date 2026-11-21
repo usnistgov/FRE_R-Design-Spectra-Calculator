@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 from . import __version__, cache, landmask, usgs_api
-from .params import DEFAULT_SITE_CLASSES, NSHM_BOUNDS, VERSION_NSHM
+from .params import DEFAULT_SITE_CLASSES, NSHM_BOUNDS, NSHM_EDITION, VERSION_NSHM
 from .single import (
     SD1_COLUMN,
     SD1FR_COLUMN,
@@ -617,6 +617,19 @@ def build_manifest(
         "grid": spec.as_dict(),
         "version": version_id,
         "nshm": VERSION_NSHM[version_id],
+        # The model revision the curves were actually requested at. The year
+        # above does not pin one down, because the service's bare-year path is
+        # an alias that follows whatever revision is current (see
+        # frer.params.NSHM_EDITION), so without this a database cannot say
+        # which model it was built from.
+        "nshm_edition": NSHM_EDITION[VERSION_NSHM[version_id]],
+        # Decimal places of latitude and longitude the nodes were requested
+        # with. A node whose coordinates need more places than this was
+        # answered for a nearby point rather than for itself, so a later
+        # re-pull at finer precision will not reproduce it -- which is a
+        # property of the database, not a fault in the re-pull, and only
+        # recording it makes that distinguishable.
+        "coordinate_precision": usgs_api.COORD_PRECISION,
         "site_classes": {
             site_class: DEFAULT_SITE_CLASSES[site_class] for site_class in site_classes
         },
@@ -671,11 +684,10 @@ def relative_differences(
 ) -> pd.DataFrame:
     """Per-row relative difference on the value columns.
 
-    ``on`` defaults to name and site class rather than ``id`` deliberately. The
-    ``id`` in a reference CSV is that site set's own index -- nehrp_34 numbers
-    its sites 1 to 34 and usgs_160 numbers its own 1 to 160 -- so joining two
-    sets on ``id`` lines up entirely different cities and reports differences
-    of over 100%.
+    ``on`` defaults to name and site class rather than ``id``, because a grid
+    node has no id and a site's id means nothing to a database keyed on
+    coordinates. Callers comparing two gridded tables pass
+    ``("lat", "lon", "site_class")``.
     """
     on = list(on)
     merged = actual.merge(expected, on=on, suffixes=("_actual", "_expected"))

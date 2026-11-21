@@ -1,4 +1,4 @@
-"""Pull USGS design values and hazard curves for sites into the JSON cache.
+"""Pull USGS hazard curves for sites into the JSON cache.
 
 Port of MATLAB ``pull_hazard_values.m``. Transient failures (rate limiting,
 5xx, timeouts) are retried with backoff by the shared session
@@ -11,13 +11,12 @@ from pathlib import Path
 from . import cache, usgs_api
 from .sites import load_sites, site_class_list
 
-NSHM_YEARS = (2018, 2023)
+NSHM_YEARS = (2023,)
 
 
 def pull_sites(
     sites_csv: Path,
     cache_dir: Path,
-    site_set: str | None = None,
     pause=usgs_api.PAUSE_RANGE,
     limit: int | None = None,
     editions: tuple = NSHM_YEARS,
@@ -26,13 +25,12 @@ def pull_sites(
     backoff_factor: float = 1.0,
     session=None,
 ) -> dict:
-    """Pull design values and hazard curves for all (site, class) pairs.
+    """Pull hazard curves for all (site, class) pairs.
 
     Parameters
     ----------
     sites_csv : path to the site table.
     cache_dir : directory for the JSON-per-site cache.
-    site_set : optionally restrict to one site set (e.g. "frtc_testbed").
     pause : polite spacing, in seconds, between successful API calls. Bursts of
         rate-limit/5xx errors are absorbed by per-request backoff, so this can
         be small; raise it to be gentler on the service.
@@ -45,7 +43,7 @@ def pull_sites(
 
     Returns a summary dict with counts of calls made/failed/skipped.
     """
-    sites = load_sites(sites_csv, site_set)
+    sites = load_sites(sites_csv)
     stats = {"entries": 0, "calls": 0, "failed": 0, "skipped": 0}
 
     if session is None:
@@ -64,28 +62,6 @@ def pull_sites(
                 entry = cache.new_entry(row.to_dict(), site_class, vs30)
 
             label = f"{row['name']} [{site_class}]"
-
-            # Design values (ASCE 7-22)
-            if entry["design_values"] is None:
-                _rate_limited_call(
-                    stats,
-                    pause,
-                    f"{label} design values (asce7-22)",
-                    lambda row=row, site_class=site_class: (
-                        usgs_api.call_design_value_api(
-                            row["id"],
-                            row["lat"],
-                            row["lon"],
-                            risk_category="II",
-                            site_class=site_class,
-                            timeout=timeout,
-                            session=session,
-                        )
-                    ),
-                    lambda data, entry=entry: entry.__setitem__("design_values", data),
-                )
-            else:
-                stats["skipped"] += 1
 
             # Hazard curves for each NSHM edition
             for year in editions:

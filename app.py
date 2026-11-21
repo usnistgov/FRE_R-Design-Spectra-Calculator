@@ -25,8 +25,8 @@ from frer.params import (
     DE_ORIENTATION,
     FR_ORIENTATION,
     NSHM_BOUNDS,
-    RISK_CATEGORIES,
     SITE_CLASS_VS30,
+    VERSION_ID,
     VERSION_NSHM,
     VS30_RANGE,
 )
@@ -45,30 +45,21 @@ REPO_ROOT = Path(__file__).resolve().parent
 SITES_CSV = REPO_ROOT / "sites.csv"
 CACHE_TTL = 24 * 3600  # seconds; a day is well inside the USGS revision cadence
 CACHE_ENTRIES = 32  # each hazard response is ~750 kB of JSON
-VERSIONS = list(VERSION_NSHM)
 
-# The precomputed site list is served entirely from the frozen USGS responses
-# committed for the benchmark, so those sites resolve offline with no live call.
-# It is the usgs_160 set: every one of its 160 sites has a cache file for each of
-# the four site classes BC/C/D/E, holding both NSHM editions and the ASCE 7-22
-# design values. Sites are still filtered on what is actually cached (see
-# precomputed_sites), so an incomplete cache shortens the list rather than
-# offering a site that cannot be calculated.
+# The precomputed site list is served entirely from the frozen hazard curves
+# committed for the benchmark, so those sites resolve offline with no live
+# call. Every one of the 160 sites has a cache file for each site class. Sites
+# are still filtered on what is actually cached (see precomputed_sites), so an
+# incomplete cache shortens the list rather than offering a site that cannot be
+# calculated.
 PRECOMPUTED_CACHE_DIR = REPO_ROOT / "tests" / "usgs_cache"
-PRECOMPUTED_SITE_SET = "usgs_160"
-# The frozen design values were pulled at risk category II (see frer.pull).
-PRECOMPUTED_RISK_CATEGORY = "II"
 
 # Columns the site map needs (see map_view.site_map). The frame is trimmed to
 # these before it goes into the chart: deck.gl serialises the data into the page,
 # so the unused sites.csv columns would otherwise be sent on every rerun.
 MAP_COLUMNS = ["id", "name", "lat", "lon"]
 
-# The gridded heatmap overlay. One database, ASCE 7-28 only: its DE values come
-# free with the hazard call that NSHM 2023 answers, where ASCE 7-22 would need a
-# second call per node and so a second build of roughly twice the length. The
-# overlay therefore states its code version and does NOT follow the code
-# version of the single-site results underneath it.
+# The gridded heatmap overlay.
 GRID_DIR = REPO_ROOT / "data" / "grid"
 GRID_CSV = GRID_DIR / "bay_area_asce7-28.csv.gz"
 GRID_JSON = GRID_DIR / "bay_area_asce7-28.json"
@@ -129,18 +120,6 @@ st.set_page_config(page_title="FREr Design Spectra Calculator", layout="wide")
 
 
 @st.cache_data(ttl=CACHE_TTL, max_entries=CACHE_ENTRIES, show_spinner=False)
-def fetch_design(lat, lon, site_class, risk_category):
-    """Cached USGS design-value call."""
-    return usgs_api.call_design_value_api(
-        f"{lat:.4f}, {lon:.4f}",
-        lat,
-        lon,
-        risk_category=risk_category,
-        site_class=site_class,
-    )
-
-
-@st.cache_data(ttl=CACHE_TTL, max_entries=CACHE_ENTRIES, show_spinner=False)
 def fetch_hazard(nshm, lat, lon, vs30):
     """Cached USGS hazard-curve call."""
     return usgs_api.call_hazard_api(nshm, lat, lon, vs30)
@@ -156,19 +135,19 @@ def cached_classes(site_id: int) -> list[str]:
 
 
 @st.cache_data(show_spinner=False)
-def precomputed_sites(site_set: str):
-    """Precomputed-set sites that have committed cache, or None if there are none.
+def precomputed_sites(sites_csv: str):
+    """Sites that have committed cache, or None if there are none.
 
     A site is offered only when at least one of its classes is cached, so every
     entry in the list resolves without a live USGS call.
 
-    ``site_set`` is an argument rather than a read of PRECOMPUTED_SITE_SET so
-    that it takes part in the cache key. Read from the module, a change to that
-    constant would leave an already-running server serving the previous set's
-    list from cache until the process was restarted.
+    ``sites_csv`` is an argument rather than a read of SITES_CSV so that it
+    takes part in the cache key. Read from the module, a change to the table
+    would leave an already-running server serving the previous list from cache
+    until the process was restarted.
     """
     try:
-        sites = load_sites(SITES_CSV, site_set)
+        sites = load_sites(sites_csv)
     except FileNotFoundError:
         return None
     available = [row for _, row in sites.iterrows() if cached_classes(int(row["id"]))]
@@ -363,14 +342,6 @@ def add_site_dialog() -> None:
         help="Shear-wave velocity used for the hazard-curve request. Defaults "
         "to the USGS value for the selected site class; override it freely.",
     )
-    risk_category = st.selectbox(
-        "Risk category",
-        RISK_CATEGORIES,
-        index=RISK_CATEGORIES.index("II"),
-        key="add_risk_category",
-        help="Affects the ASCE 7-22 DE values only. FRE_R and the ASCE 7-28 "
-        "spectra are computed from the hazard curves and do not use it.",
-    )
     if not st.button("Add site", type="primary", use_container_width=True):
         return
 
@@ -381,10 +352,9 @@ def add_site_dialog() -> None:
         "lon": lon,
         "site_class": site_class,
         "vs30": vs30,
-        "risk_category": risk_category,
     }
     try:
-        record["results"] = run_analysis({**record, "versions": list(VERSIONS)})
+        record["results"] = run_analysis(record)
     except ValueError as error:
         st.error(str(error))
         return
@@ -679,29 +649,24 @@ def run_analysis(inputs):
     Precomputed sites do not come through here: they are read from the committed
     cache by site_results, with no network access and no spinner to justify.
     """
-    results = []
-    for version_id in inputs["versions"]:
-        with st.spinner(
-            f"Fetching NSHM {VERSION_NSHM[version_id]} data for {version_id} "
-            "from USGS (about 15 seconds)..."
-        ):
-            entry = pull_site(
-                inputs["lat"],
-                inputs["lon"],
-                inputs["site_class"],
-                inputs["vs30"],
-                version_id,
-                name=inputs["name"],
-                risk_category=inputs["risk_category"],
-                fetch_design=fetch_design,
-                fetch_hazard=fetch_hazard,
-            )
-        results.append(calc_site(entry, version_id))
-    return results
+    with st.spinner(
+        f"Fetching NSHM {VERSION_NSHM[VERSION_ID]} hazard curves for "
+        f"{VERSION_ID} from USGS (about 15 seconds)..."
+    ):
+        entry = pull_site(
+            inputs["lat"],
+            inputs["lon"],
+            inputs["site_class"],
+            inputs["vs30"],
+            VERSION_ID,
+            name=inputs["name"],
+            fetch_hazard=fetch_hazard,
+        )
+    return [calc_site(entry, VERSION_ID)]
 
 
 def summary_frame(results) -> pd.DataFrame:
-    """One row per version, using the column names of frer_design_vals.csv."""
+    """One row per result, using the column names of frer_design_vals.csv."""
     rows = []
     for result in results:
         row = {
@@ -710,7 +675,6 @@ def summary_frame(results) -> pd.DataFrame:
             "lon": result.lon,
             "site_class": result.site_class,
             "vs30": result.vs30,
-            "risk_category": result.risk_category,
             "version": result.version_id,
             "nshm": result.nshm,
         }
@@ -849,11 +813,11 @@ GM_RP_LABELS = {"frer": "FRE$_R$", "mcer": "MCE$_R$", "de": "DE"}
 
 
 def return_period_markdown(result) -> str | None:
-    """Return periods (years) as a Markdown table string, or None for ASCE 7-22.
+    """Return periods (years) as a Markdown table string.
 
     Rendered with st.markdown rather than st.dataframe so the ground-motion
-    labels show their subscripts (FRE_R, MCE_R) as LaTeX; a dataframe prints the
-    raw markup. None when there are no return periods (ASCE 7-22).
+    labels show their subscripts (FRE_R, MCE_R) as LaTeX; a dataframe prints
+    the raw markup. None if the result carries no return periods at all.
     """
     cols = return_period_columns(result)
     if not cols:
@@ -873,12 +837,11 @@ def return_period_markdown(result) -> str | None:
 def newest_first(results):
     """The results in reverse code order, so the current edition leads.
 
-    VERSION_NSHM is written oldest first -- it is the order a CSV of both
-    editions is read in, and the order the calculator has always produced --
-    so the page reverses it rather than the data being reordered underneath
-    everything else that consumes it.
+    There is one code version now, so this is the identity. It is kept as the
+    single place that would decide the order if a second one were ever added
+    back, rather than that decision being spread through the page.
     """
-    return sorted(results, key=lambda r: VERSIONS.index(r.version_id), reverse=True)
+    return list(results)
 
 
 def show_version(result, y_max, comparing):
@@ -924,19 +887,12 @@ def show_version(result, y_max, comparing):
                 icon="⚠️",
             )
     else:
-        # Where to send someone whose ASCE 7-22 section has no return periods.
-        # The 7-28 section is above it on this page, and when it is the only
-        # section there is nothing to point at but the selector the single-site
-        # flow has.
+        # Every result is fully probabilistic now, so every one has return
+        # periods; reaching here means a period's motion fell off the end of
+        # its hazard curve, which is a property of the site, not the code.
         st.caption(
-            "Not defined for ASCE 7-22: its design values mix risk-targeted "
-            "and deterministic caps that have no single hazard-curve return "
-            "period. "
-            + (
-                "The ASCE 7-28 return periods are above."
-                if comparing
-                else "Select ASCE 7-28 for return periods."
-            )
+            "Not available: the risk-targeted motion falls outside the range "
+            "of this site's hazard curves."
         )
 
     st.markdown("**Design spectra**")
@@ -974,12 +930,12 @@ def show_results(results):
     )
 
 
-def site_results(site_id, site_class, versions):
+def site_results(site_id, site_class):
     """Develop the design values for one cached site, straight from the cache."""
     entry = load_entry(PRECOMPUTED_CACHE_DIR, site_id, site_class)
     if entry is None:
         raise ValueError("No precomputed data for that site and class; pick another.")
-    return [calc_site(entry, version_id) for version_id in versions]
+    return [calc_site(entry, VERSION_ID)]
 
 
 def render_results(sites, site_id, site_class, records) -> None:
@@ -1007,8 +963,7 @@ def render_added_results(record) -> None:
     st.caption(
         f"Latitude {record['lat']:.4f}, longitude {record['lon']:.4f} · "
         f"site class {record['site_class']} · "
-        f"v$_{{S30}}$ {record['vs30']:.0f} m/s · "
-        f"risk category {record['risk_category']} · added this session"
+        f"v$_{{S30}}$ {record['vs30']:.0f} m/s · added this session"
     )
     show_results(record["results"])
 
@@ -1023,10 +978,10 @@ def render_mapped_results(sites, site_id, site_class) -> None:
     st.subheader(str(row["name"]))
     st.caption(
         f"Latitude {row['lat']:.4f}, longitude {row['lon']:.4f} · "
-        f"site class {site_class} · risk category {PRECOMPUTED_RISK_CATEGORY}"
+        f"site class {site_class}"
     )
     try:
-        show_results(site_results(site_id, site_class, list(VERSIONS)))
+        show_results(site_results(site_id, site_class))
     except ValueError as e:
         st.error(str(e))
 
@@ -1038,7 +993,7 @@ def render_mapped_results(sites, site_id, site_class) -> None:
 # every screen.
 st.sidebar.title("FRE$_R$ Calculator")
 
-mapped = precomputed_sites(PRECOMPUTED_SITE_SET)
+mapped = precomputed_sites(SITES_CSV)
 add_site_button()
 
 records = added_sites()
